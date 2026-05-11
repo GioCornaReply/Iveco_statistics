@@ -1,0 +1,12 @@
+# Local data samples exported from Databricks.
+data/sample/
+data/output/
+
+# Python local artifacts.
+__pycache__/
+*.py[cod]
+
+# Local Spark artifacts.
+metastore_db/
+spark-warehouse/
+derby.log

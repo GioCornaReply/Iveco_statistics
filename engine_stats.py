@@ -7,12 +7,14 @@ import pandas as pd
 def pyspark_variabili_x(df: DataFrame, col_list: list, suffix: str) -> DataFrame:
     if not col_list:
         return df
-    df = df.withColumn("total_sum_temp", sum([F.col(c) for c in col_list]))
+    safe_cols = [F.coalesce(F.col(c).cast("double"), F.lit(0.0)) for c in col_list]
+    df = df.withColumn("total_sum_temp", sum(safe_cols))
     for c in col_list:
         new_name = f"{c.upper()}_{suffix.upper()}"
-        df = df.withColumn(new_name, 
+        safe_value = F.coalesce(F.col(c).cast("double"), F.lit(0.0))
+        df = df.withColumn(new_name,
             F.when(F.col("total_sum_temp") > 0, 
-                   F.round((F.col(c) / F.col("total_sum_temp")) * 100, 2))
+                   F.round((safe_value / F.col("total_sum_temp")) * 100, 2))
              .otherwise(0)
         )
     return df.drop("total_sum_temp")
