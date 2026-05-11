@@ -35,6 +35,10 @@ OUTPUT_FORMAT = "parquet"
 # Cartella DBFS di output. Databricks scrivera' una directory con part file.
 OUTPUT_BASE_PATH = "dbfs:/FileStore/iveco_statistics/fat_table_samples"
 
+# Nome cartella generata sotto OUTPUT_BASE_PATH.
+# Esempio: Subset_Config_399_Date_20260511_105916
+OUTPUT_FOLDER_TEMPLATE = "Subset_Config_{config}_Date_{timestamp}"
+
 
 def _get_spark():
     """Ritorna la SparkSession Databricks o ne crea una locale per test minimi."""
@@ -79,7 +83,12 @@ def export_fat_table_sample():
     spark_session = _get_spark()
     timestamp = get_current_timestamp()
     config_label = "_".join(map(str, sorted(CONFIG_IDS)))
-    output_path = f"{OUTPUT_BASE_PATH}/config_{config_label}_{OUTPUT_FORMAT}_{timestamp}"
+    output_folder = OUTPUT_FOLDER_TEMPLATE.format(
+        config=config_label,
+        timestamp=timestamp,
+        format=OUTPUT_FORMAT,
+    )
+    output_path = f"{OUTPUT_BASE_PATH}/{output_folder}"
 
     log_step(f"Avvio export sample fat table per config: {CONFIG_IDS}")
     df = import_fat_tables_3(spark_session, CONFIG_IDS)
