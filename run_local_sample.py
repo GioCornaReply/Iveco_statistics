@@ -10,11 +10,11 @@ from pathlib import Path
 import pandas as pd
 from pyspark.sql import SparkSession
 
-from engine_cleaning import clean_spark_column_names
+from engine_cleaning import clean_spark_column_names, keep_latest_record_per_vin
 from engine_config import get_columns_for_sheet
 from engine_loader import extract_metadata
 from engine_stats import pyspark_variabili_x, report_pivot_pyspark
-from engine_utils import log_step, report_dim, report_vin
+from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
 
 
 DEFAULT_SAMPLE_PATH = "data/sample/Subset_Config_399_Date_20260511_123241"
@@ -128,7 +128,14 @@ def export_excel_report(df, validation, output_dir):
     excel_path = output_path / "local_sample_statistics.xlsx"
 
     exported = []
-    with pd.ExcelWriter(excel_path) as writer:
+    try:
+        writer = pd.ExcelWriter(excel_path)
+    except PermissionError:
+        excel_path = output_path / f"local_sample_statistics_{get_current_timestamp()}.xlsx"
+        log_step(f"File Excel standard occupato, uso: {excel_path}")
+        writer = pd.ExcelWriter(excel_path)
+
+    with writer:
         for sheet_id, validation_entry in validation.items():
             df_pivot, sheet_name = build_sheet_pivot(df, sheet_id, validation_entry)
             if df_pivot is None or df_pivot.empty:
@@ -147,7 +154,14 @@ def export_excel_report(df, validation, output_dir):
     return excel_path
 
 
-def run_local_sample(sample_path, input_format, sheet_ids, output_dir, export_excel):
+def run_local_sample(
+    sample_path,
+    input_format,
+    sheet_ids,
+    output_dir,
+    export_excel,
+    keep_latest_per_vin,
+):
     spark = build_spark()
 
     try:
@@ -159,6 +173,12 @@ def run_local_sample(sample_path, input_format, sheet_ids, output_dir, export_ex
         log_step("Pulizia nomi colonne")
         df_clean = clean_spark_column_names(df_raw)
         report_dim(df_clean, "LOCAL CLEAN sample")
+
+        if keep_latest_per_vin:
+            log_step("Filtro ultimo record disponibile per VIN")
+            df_clean = keep_latest_record_per_vin(df_clean)
+            report_dim(df_clean, "LOCAL LATEST VIN sample")
+            report_vin(df_clean)
 
         p_type, p_group, p_series = extract_metadata(df_clean)
         log_step(f"Metadata rilevati: type={p_type}, group={p_group}, series={p_series}")
@@ -191,6 +211,11 @@ def parse_args():
     parser.add_argument("--sheets", nargs="+", default=DEFAULT_SHEETS)
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--no-excel", action="store_true")
+    parser.add_argument(
+        "--keep-all-updates",
+        action="store_true",
+        help="Non deduplicare per VIN; mantiene anche record storici/intermedi.",
+    )
     return parser.parse_args()
 
 
@@ -202,4 +227,5 @@ if __name__ == "__main__":
         args.sheets,
         args.output_dir,
         not args.no_excel,
+        not args.keep_all_updates,
     )

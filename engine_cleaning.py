@@ -3,6 +3,7 @@
 # engine_cleaning.py
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
+from pyspark.sql.window import Window
 import re
 
 def clean_spark_column_names(df: DataFrame) -> DataFrame:
@@ -31,6 +32,31 @@ def to_null(col_name, val_to_replace=0):
 def coalesce_columns(df: DataFrame, col_target: str, col_sources: list) -> DataFrame:
     """Unisce più colonne in una sola usando coalesce (prende il primo valore non null)."""
     return df.withColumn(col_target, F.coalesce(*[F.col(c) for c in col_sources]))
+
+def keep_latest_record_per_vin(
+    df: DataFrame,
+    vin_col: str = "vin",
+    timestamp_candidates=("udt_timestamp", "easy_timestamp", "utc_datetime"),
+) -> DataFrame:
+    """Mantiene solo il record piu' aggiornato per ogni VIN."""
+    if vin_col not in df.columns:
+        raise ValueError(f"Colonna VIN non trovata: {vin_col}")
+
+    timestamp_col = next((c for c in timestamp_candidates if c in df.columns), None)
+    if timestamp_col is None:
+        raise ValueError(
+            "Nessuna colonna timestamp trovata per dedup VIN. "
+            f"Cercate: {list(timestamp_candidates)}"
+        )
+
+    window_spec = Window.partitionBy(vin_col).orderBy(
+        F.col(timestamp_col).cast("timestamp").desc_nulls_last()
+    )
+    return (
+        df.withColumn("_vin_latest_rank", F.row_number().over(window_spec))
+        .filter(F.col("_vin_latest_rank") == 1)
+        .drop("_vin_latest_rank")
+    )
 
 # --- NORMALIZZAZIONE MODELLI MOTORE ---
 
