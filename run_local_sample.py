@@ -5,7 +5,9 @@
 # senza leggere direttamente le fat table cliente.
 
 import argparse
+import os
 from pathlib import Path
+import sys
 
 import pandas as pd
 from pyspark.sql import SparkSession
@@ -22,10 +24,40 @@ DEFAULT_FORMAT = "parquet"
 DEFAULT_SHEETS = get_default_sheet_ids()
 DEFAULT_OUTPUT_DIR = "data/output"
 INVALID_EXCEL_SHEET_CHARS = str.maketrans({char: "-" for char in "[]:*?/\\"})
+DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
+DEFAULT_HADOOP_HOME = r"C:\hadoop"
+
+
+def configure_local_spark_environment():
+    """Imposta le variabili minime per PySpark locale su Windows/VS Code."""
+    if os.name != "nt":
+        return
+
+    java_home = os.environ.get("JAVA_HOME") or DEFAULT_JAVA_HOME
+    hadoop_home = os.environ.get("HADOOP_HOME") or DEFAULT_HADOOP_HOME
+
+    if Path(java_home).exists():
+        os.environ["JAVA_HOME"] = java_home
+    if Path(hadoop_home, "bin", "winutils.exe").exists():
+        os.environ["HADOOP_HOME"] = hadoop_home
+
+    path_entries = [
+        str(Path(hadoop_home, "bin")),
+        str(Path(java_home, "bin")),
+    ]
+    current_path = os.environ.get("PATH", "")
+    existing = {p.lower() for p in current_path.split(os.pathsep) if p}
+    missing_entries = [p for p in path_entries if Path(p).exists() and p.lower() not in existing]
+    if missing_entries:
+        os.environ["PATH"] = os.pathsep.join(missing_entries + [current_path])
+
+    os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
+    os.environ.setdefault("PYSPARK_DRIVER_PYTHON", sys.executable)
 
 
 def build_spark(app_name="iveco-local-sample"):
     """Crea una SparkSession locale per sviluppo/debug."""
+    configure_local_spark_environment()
     return (
         SparkSession.builder.appName(app_name)
         .master("local[*]")
