@@ -13,8 +13,6 @@
         "data/sample/Subset_Config_399_Date_20260511_123241",
         "--format",
         "parquet",
-        "--sheets",
-        "5a",
         "--output-dir",
         "data/output"
       ],

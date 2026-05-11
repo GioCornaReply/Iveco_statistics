@@ -11,7 +11,7 @@ import pandas as pd
 from pyspark.sql import SparkSession
 
 from engine_cleaning import clean_spark_column_names, keep_latest_record_per_vin
-from engine_config import get_columns_for_sheet
+from engine_config import get_columns_for_sheet, get_default_sheet_ids, get_sheet_settings
 from engine_loader import extract_metadata
 from engine_stats import pyspark_variabili_x, report_pivot_pyspark
 from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
@@ -19,17 +19,9 @@ from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
 
 DEFAULT_SAMPLE_PATH = "data/sample/Subset_Config_399_Date_20260511_123241"
 DEFAULT_FORMAT = "parquet"
-DEFAULT_SHEETS = ["5a"]
+DEFAULT_SHEETS = get_default_sheet_ids()
 DEFAULT_OUTPUT_DIR = "data/output"
-
-LOCAL_SHEET_SETTINGS = {
-    "5a": {
-        "name": "5) CATALYST INFO",
-        "group_by": ["product_group"],
-        "trigger": 1,
-        "use_percentage_columns": True,
-    }
-}
+INVALID_EXCEL_SHEET_CHARS = str.maketrans({char: "-" for char in "[]:*?/\\"})
 
 
 def build_spark(app_name="iveco-local-sample"):
@@ -68,7 +60,7 @@ def validate_config_columns(df, p_series, p_group, sheet_ids):
     """Mostra quali colonne configurate sono presenti nel sample."""
     validation = {}
     for sheet_id in sheet_ids:
-        configured = get_columns_for_sheet(p_series, p_group, sheet_id)
+        configured = get_columns_for_sheet(p_series, p_group, sheet_id, df.columns)
         present = [col_name for col_name in configured if col_name in df.columns]
         missing = [col_name for col_name in configured if col_name not in df.columns]
 
@@ -90,15 +82,7 @@ def validate_config_columns(df, p_series, p_group, sheet_ids):
 
 def build_sheet_pivot(df, sheet_id, validation_entry):
     """Costruisce la pivot Pandas per un singolo sheet locale."""
-    settings = LOCAL_SHEET_SETTINGS.get(
-        sheet_id,
-        {
-            "name": sheet_id,
-            "group_by": ["product_group"],
-            "trigger": 1,
-            "use_percentage_columns": True,
-        },
-    )
+    settings = get_sheet_settings(sheet_id)
     present_cols = validation_entry["present"]
     group_by = [col_name for col_name in settings["group_by"] if col_name in df.columns]
 
@@ -121,13 +105,47 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
     return df_pivot, settings["name"]
 
 
-def export_excel_report(df, validation, output_dir):
-    """Esporta le pivot generate localmente in un file Excel sotto data/output."""
+def build_sheet_outputs(df, validation):
+    """Genera le pivot per tutti gli sheet e restituisce gli output riusabili."""
+    outputs = []
+    for sheet_id, validation_entry in validation.items():
+        df_pivot, sheet_name = build_sheet_pivot(df, sheet_id, validation_entry)
+        if df_pivot is None or df_pivot.empty:
+            continue
+
+        outputs.append(
+            {
+                "sheet_id": sheet_id,
+                "sheet_name": sheet_name,
+                "dataframe": df_pivot,
+                "validation": validation_entry,
+            }
+        )
+    return outputs
+
+
+def make_excel_sheet_name(sheet_name, used_names):
+    """Normalizza un nome sheet per i vincoli Excel/openpyxl."""
+    safe_name = sheet_name.translate(INVALID_EXCEL_SHEET_CHARS).strip() or "Sheet"
+    safe_name = safe_name[:31]
+    candidate = safe_name
+    suffix = 1
+    while candidate in used_names:
+        suffix_text = f"_{suffix}"
+        candidate = f"{safe_name[:31 - len(suffix_text)]}{suffix_text}"
+        suffix += 1
+    used_names.add(candidate)
+    return candidate
+
+
+def export_excel_outputs(sheet_outputs, output_dir):
+    """Esporta pivot gia' generate in un file Excel sotto data/output."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     excel_path = output_path / "local_sample_statistics.xlsx"
 
     exported = []
+    used_sheet_names = set()
     try:
         writer = pd.ExcelWriter(excel_path)
     except PermissionError:
@@ -136,12 +154,11 @@ def export_excel_report(df, validation, output_dir):
         writer = pd.ExcelWriter(excel_path)
 
     with writer:
-        for sheet_id, validation_entry in validation.items():
-            df_pivot, sheet_name = build_sheet_pivot(df, sheet_id, validation_entry)
-            if df_pivot is None or df_pivot.empty:
-                continue
-
-            df_pivot.to_excel(writer, sheet_name=sheet_name[:31], index=False)
+        for sheet_output in sheet_outputs:
+            df_pivot = sheet_output["dataframe"]
+            sheet_name = sheet_output["sheet_name"]
+            excel_sheet_name = make_excel_sheet_name(sheet_name, used_sheet_names)
+            df_pivot.to_excel(writer, sheet_name=excel_sheet_name, index=False)
             exported.append(sheet_name)
             log_step(f"Sheet esportato: {sheet_name} ({len(df_pivot)} righe)")
 
@@ -152,6 +169,12 @@ def export_excel_report(df, validation, output_dir):
 
     log_step(f"Excel locale creato: {excel_path}")
     return excel_path
+
+
+def export_excel_report(df, validation, output_dir):
+    """Genera ed esporta le pivot in un file Excel sotto data/output."""
+    sheet_outputs = build_sheet_outputs(df, validation)
+    return export_excel_outputs(sheet_outputs, output_dir)
 
 
 def run_local_sample(
