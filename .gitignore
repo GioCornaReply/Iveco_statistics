@@ -1,6 +1,7 @@
 # Local data samples exported from Databricks.
 data/sample/
 data/output/
+Excel_statistics/*.xlsx
 
 # Python local artifacts.
 __pycache__/

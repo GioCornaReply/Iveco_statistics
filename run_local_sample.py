@@ -5,6 +5,7 @@
 # senza leggere direttamente le fat table cliente.
 
 import argparse
+from decimal import Decimal
 import os
 from pathlib import Path
 import sys
@@ -27,7 +28,7 @@ from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
 DEFAULT_SAMPLE_PATH = "data/sample/Subset_Config_399_Date_20260511_123241"
 DEFAULT_FORMAT = "parquet"
 DEFAULT_SHEETS = get_default_sheet_ids()
-DEFAULT_OUTPUT_DIR = "data/output"
+DEFAULT_OUTPUT_DIR = "Excel_statistics"
 DEFAULT_INPUT_MODE = "sample"
 DEFAULT_CONFIG = {399}
 INVALID_EXCEL_SHEET_CHARS = str.maketrans({char: "-" for char in "[]:*?/\\"})
@@ -218,8 +219,27 @@ def make_excel_sheet_name(sheet_name, used_names):
     return candidate
 
 
+def prepare_excel_dataframe(df):
+    """Normalizza i valori numerici prima dell'export Excel."""
+    df_export = df.copy()
+
+    numeric_cols = df_export.select_dtypes(include=["number"]).columns
+    if len(numeric_cols) > 0:
+        df_export[numeric_cols] = df_export[numeric_cols].round(2)
+
+    object_cols = df_export.select_dtypes(include=["object"]).columns
+    for col_name in object_cols:
+        has_decimal = df_export[col_name].map(lambda value: isinstance(value, Decimal)).any()
+        if has_decimal:
+            df_export[col_name] = df_export[col_name].map(
+                lambda value: round(float(value), 2) if isinstance(value, Decimal) else value
+            )
+
+    return df_export
+
+
 def export_excel_outputs(sheet_outputs, output_dir):
-    """Esporta pivot gia' generate in un file Excel sotto data/output."""
+    """Esporta pivot gia' generate in un file Excel."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     excel_path = output_path / "local_sample_statistics.xlsx"
@@ -235,7 +255,7 @@ def export_excel_outputs(sheet_outputs, output_dir):
 
     with writer:
         for sheet_output in sheet_outputs:
-            df_pivot = sheet_output["dataframe"]
+            df_pivot = prepare_excel_dataframe(sheet_output["dataframe"])
             sheet_name = sheet_output["sheet_name"]
             excel_sheet_name = make_excel_sheet_name(sheet_name, used_sheet_names)
             df_pivot.to_excel(writer, sheet_name=excel_sheet_name, index=False)

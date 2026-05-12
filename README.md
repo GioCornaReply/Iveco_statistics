@@ -70,7 +70,7 @@ python -m run_local_sample
 Output:
 
 ```text
-data/output/local_sample_statistics.xlsx
+Excel_statistics/local_sample_statistics.xlsx
 ```
 
 ## Run Su Databricks
@@ -81,8 +81,12 @@ rileva Databricks tramite `dbutils` e crea widget modificabili:
 ```python
 input_mode  # default: "fat_table"
 config      # default: "399"; accetta anche "399,400"
-output_dir  # default: "/dbfs/FileStore/iveco_statistics_output"
+output_dir  # default: "Excel_statistics"
 ```
+
+Gli Excel generati vengono salvati nella cartella `Excel_statistics/`.
+I file `.xlsx` sono ignorati da Git, quindi puoi scaricarli quando vuoi senza
+committare dati/output pesanti nella repo.
 
 Per testare da notebook/driver Databricks con pochi sheet:
 
