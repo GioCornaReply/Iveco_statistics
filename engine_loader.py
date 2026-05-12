@@ -1,35 +1,51 @@
 # engine_loader.py
-from pyspark.sql import SparkSession
-import pyspark.sql.functions as F
+from pyspark.sql.utils import AnalysisException
+
 
 def get_table_path(val):
-    """Gestisce i percorsi delle tabelle in base alla config."""
+    """Restituisce il nome tabella Databricks in base alla config."""
     if val in {36, 76, 77}:
         return f"missiontest.fat_table_easy_{val}"
-    elif val == 49:
+    if val == 49:
         return f"u_truck_analyzer_p.vodr_statistics.fat_table_{val}"
-    elif val in {399, 400, 401, 402}:
+    if val in {399, 400, 401, 402}:
         return f"u_truck_analyzer_p.mission_test_statistics.fat_table_{val}"
-    elif val < 100:
+    if val < 100:
         return f"vodr.fat_table_{val}"
-    elif val > 250:
+    if val > 250:
         return f"missiontest.fat_table_{val}"
     return None
 
+
 def import_fat_tables_3(spark, config):
-    """Importa e unisce le tabelle."""
-    c = list(sorted(config)) if isinstance(config, (set, list)) else [config]
+    """Importa e unisce le fat table Databricks per una o piu' config."""
+    c = list(sorted(config)) if isinstance(config, (set, list, tuple)) else [config]
     df = None
+    loaded_tables = []
+    missing_tables = []
+
     for val in c:
-        table_path = get_table_path(val)
-        if not table_path: continue
+        table_path = get_table_path(int(val))
+        if not table_path:
+            missing_tables.append(f"config {val}: sorgente non configurata")
+            continue
+
         try:
             temp_df = spark.sql(f"SELECT * FROM {table_path}")
             df = temp_df if df is None else df.unionByName(temp_df, allowMissingColumns=True)
-            print(f"✅ Caricata: {table_path}")
-        except:
-            print(f"❌ Tabella {table_path} non trovata.")
+            loaded_tables.append(table_path)
+            print(f"Caricata fat table: {table_path}")
+        except AnalysisException as exc:
+            missing_tables.append(f"{table_path}: {exc}")
+            print(f"Tabella non trovata o non accessibile: {table_path}")
+
+    if df is None:
+        details = "\n".join(missing_tables) or "nessuna tabella risolta"
+        raise FileNotFoundError(f"Nessuna fat table caricata per config={c}.\n{details}")
+
+    print(f"Fat table caricate: {loaded_tables}")
     return df
+
 
 def get_export_file_name(product_group, config):
     """Genera il nome del file Excel."""
@@ -38,44 +54,50 @@ def get_export_file_name(product_group, config):
         "EUROCARGO": "EUROCARGO",
         "IVECO_S_WAY": "HEAVY_SWAY",
         "IVECO_X_WAY": "HEAVY_XWAY",
-        "IVECO_T_WAY": "HEAVY_TWAY"
+        "IVECO_T_WAY": "HEAVY_TWAY",
     }
     prefix = mapping.get(product_group, "GENERIC")
     return f"Statistics_{prefix}_{config_str}_dataset.xlsx"
 
+
 def extract_metadata(df):
-    """
-    Estrae i VALORI REALI dalle celle del DataFrame.
-    Risolve l'errore 'series/group' leggendo il contenuto della riga.
-    """
+    """Estrae i valori reali product_type/group/series dalle righe."""
     try:
-        # Peschiamo la prima riga
         row = df.select("product_type", "product_group", "product_series").first()
         if not row:
             return "UNKNOWN", "UNKNOWN", "UNKNOWN"
 
-        # Trasformiamo in dizionario per evitare confusione tra nomi colonne e valori
         data = row.asDict()
-        
+
         def clean(v):
-            if v is None: return "UNKNOWN"
-            # Pulizia: tutto maiuscolo, spazi/trattini/slash diventano underscore
-            return str(v).strip().upper().replace(" ", "_").replace("-", "_").replace("/", "_")
+            if v is None:
+                return "UNKNOWN"
+            return (
+                str(v)
+                .strip()
+                .upper()
+                .replace(" ", "_")
+                .replace("-", "_")
+                .replace("/", "_")
+            )
 
         p_type = clean(data.get("product_type"))
         p_group = clean(data.get("product_group"))
         p_series = clean(data.get("product_series"))
 
         return p_type, p_group, p_series
-    except Exception as e:
-        print(f"❌ Errore estrazione metadati: {e}")
+    except Exception as exc:
+        print(f"Errore estrazione metadati: {exc}")
         return "ERROR", "ERROR", "ERROR"
 
-# Le funzioni Delta rimangono qui perché riguardano il caricamento/salvataggio
+
 def save_to_delta(df, table_name):
+    """Salva un DataFrame in Delta su DBFS."""
     path = f"dbfs:/mnt/truck_analyzer/checkpoints/{table_name}"
     df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(path)
 
+
 def load_from_delta(spark, table_name):
+    """Legge un DataFrame Delta da DBFS."""
     path = f"dbfs:/mnt/truck_analyzer/checkpoints/{table_name}"
     return spark.read.format("delta").load(path)

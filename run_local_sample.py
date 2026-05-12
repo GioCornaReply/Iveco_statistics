@@ -19,7 +19,7 @@ from engine_cleaning import (
     keep_latest_record_per_vin,
 )
 from engine_config import get_columns_for_sheet, get_default_sheet_ids, get_sheet_settings
-from engine_loader import extract_metadata
+from engine_loader import extract_metadata, import_fat_tables_3
 from engine_stats import pyspark_variabili_x, report_pivot_pyspark_fixed
 from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
 
@@ -28,6 +28,8 @@ DEFAULT_SAMPLE_PATH = "data/sample/Subset_Config_399_Date_20260511_123241"
 DEFAULT_FORMAT = "parquet"
 DEFAULT_SHEETS = get_default_sheet_ids()
 DEFAULT_OUTPUT_DIR = "data/output"
+DEFAULT_INPUT_MODE = "sample"
+DEFAULT_CONFIG = {399}
 INVALID_EXCEL_SHEET_CHARS = str.maketrans({char: "-" for char in "[]:*?/\\"})
 DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
 DEFAULT_HADOOP_HOME = r"C:\hadoop"
@@ -91,6 +93,16 @@ def read_sample(spark, sample_path, input_format):
         )
 
     raise ValueError(f"Formato non supportato: {input_format}")
+
+
+def read_input_data(spark, input_mode, sample_path, input_format, config):
+    """Legge il dataset da sample locale oppure da fat table Databricks."""
+    if input_mode == "sample":
+        return read_sample(spark, sample_path, input_format)
+    if input_mode == "fat_table":
+        return import_fat_tables_3(spark, config)
+
+    raise ValueError("input_mode deve essere 'sample' oppure 'fat_table'")
 
 
 def validate_config_columns(df, p_series, p_group, sheet_ids):
@@ -252,13 +264,19 @@ def run_local_sample(
     output_dir,
     export_excel,
     keep_latest_per_vin,
+    input_mode=DEFAULT_INPUT_MODE,
+    config=DEFAULT_CONFIG,
 ):
     spark = build_spark()
 
     try:
-        log_step(f"Lettura sample locale: {sample_path}")
-        df_raw = read_sample(spark, sample_path, input_format)
-        report_dim(df_raw, "LOCAL RAW sample")
+        if input_mode == "fat_table":
+            log_step(f"Lettura fat table Databricks per config: {sorted(config)}")
+        else:
+            log_step(f"Lettura sample locale: {sample_path}")
+
+        df_raw = read_input_data(spark, input_mode, sample_path, input_format, config)
+        report_dim(df_raw, "RAW input")
         report_vin(df_raw)
 
         log_step("Pulizia nomi colonne")
@@ -304,6 +322,8 @@ def parse_args():
     parser.add_argument("--format", choices=["parquet", "csv"], default=DEFAULT_FORMAT)
     parser.add_argument("--sheets", nargs="+", default=DEFAULT_SHEETS)
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--input-mode", choices=["sample", "fat_table"], default=DEFAULT_INPUT_MODE)
+    parser.add_argument("--config", nargs="+", type=int, default=sorted(DEFAULT_CONFIG))
     parser.add_argument("--no-excel", action="store_true")
     parser.add_argument(
         "--keep-all-updates",
@@ -322,4 +342,6 @@ if __name__ == "__main__":
         args.output_dir,
         not args.no_excel,
         not args.keep_all_updates,
+        args.input_mode,
+        set(args.config),
     )

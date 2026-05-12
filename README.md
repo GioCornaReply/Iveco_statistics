@@ -73,6 +73,29 @@ Output:
 data/output/local_sample_statistics.xlsx
 ```
 
+## Run Su Databricks
+
+Nel cluster cliente non serve il sample locale. `Main_pipeline_modular.ipynb`
+rileva Databricks tramite `dbutils` e crea widget modificabili:
+
+```python
+input_mode  # default: "fat_table"
+config      # default: "399"; accetta anche "399,400"
+output_dir  # default: "/dbfs/FileStore/iveco_statistics_output"
+```
+
+Per testare da notebook/driver Databricks con pochi sheet:
+
+```python
+sheet_ids = ["complete_dataset", "fuel_consumption", "1a", "1a_2"]
+```
+
+Da terminale/job Python:
+
+```bash
+python -m run_local_sample --input-mode fat_table --config 399
+```
+
 Per non deduplicare il sample per VIN:
 
 ```powershell
