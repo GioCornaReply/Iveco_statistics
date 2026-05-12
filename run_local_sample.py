@@ -8,6 +8,7 @@ import argparse
 from decimal import Decimal
 import os
 from pathlib import Path
+import re
 import sys
 
 import pandas as pd
@@ -168,6 +169,10 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
                 F.when(F.col(col_name).cast("double") < settings["max_value"], F.col(col_name)),
             )
 
+    if settings["scale"] != 1:
+        for col_name in pivot_cols:
+            df_stats = df_stats.withColumn(col_name, F.col(col_name).cast("double") * settings["scale"])
+
     configured_triggers = settings["triggers"]
     if configured_triggers:
         triggers = list(configured_triggers[: len(pivot_cols)])
@@ -219,6 +224,24 @@ def make_excel_sheet_name(sheet_name, used_names):
     return candidate
 
 
+def clean_excel_column_name(col_name):
+    """Rende leggibili gli header finali Excel."""
+    name = str(col_name)
+    lower_name = name.lower()
+
+    if lower_name.startswith("stddev_"):
+        return "STD"
+    if lower_name.startswith("advice_"):
+        return "advice"
+    if lower_name.startswith("alert_"):
+        return "alert"
+    if lower_name.startswith("count_"):
+        return "count"
+
+    name = re.sub(r"_+", " ", name).strip()
+    return name
+
+
 def prepare_excel_dataframe(df):
     """Normalizza i valori numerici prima dell'export Excel."""
     df_export = df.copy()
@@ -235,6 +258,7 @@ def prepare_excel_dataframe(df):
                 lambda value: round(float(value), 2) if isinstance(value, Decimal) else value
             )
 
+    df_export.columns = [clean_excel_column_name(col_name) for col_name in df_export.columns]
     return df_export
 
 
@@ -247,18 +271,29 @@ def export_excel_outputs(sheet_outputs, output_dir):
     exported = []
     used_sheet_names = set()
     try:
-        writer = pd.ExcelWriter(excel_path)
+        import xlsxwriter  # noqa: F401
+
+        excel_engine = "xlsxwriter"
+    except ImportError:
+        excel_engine = None
+
+    try:
+        writer = pd.ExcelWriter(excel_path, engine=excel_engine)
     except PermissionError:
         excel_path = output_path / f"local_sample_statistics_{get_current_timestamp()}.xlsx"
         log_step(f"File Excel standard occupato, uso: {excel_path}")
-        writer = pd.ExcelWriter(excel_path)
+        writer = pd.ExcelWriter(excel_path, engine=excel_engine)
 
     with writer:
         for sheet_output in sheet_outputs:
             df_pivot = prepare_excel_dataframe(sheet_output["dataframe"])
             sheet_name = sheet_output["sheet_name"]
             excel_sheet_name = make_excel_sheet_name(sheet_name, used_sheet_names)
-            df_pivot.to_excel(writer, sheet_name=excel_sheet_name, index=False)
+            df_pivot.to_excel(writer, sheet_name=excel_sheet_name, index=False, float_format="%.2f")
+            if excel_engine == "xlsxwriter":
+                worksheet = writer.sheets[excel_sheet_name]
+                number_format = writer.book.add_format({"num_format": "0.00"})
+                worksheet.set_column(0, len(df_pivot.columns) - 1, None, number_format)
             exported.append(sheet_name)
             log_step(f"Sheet esportato: {sheet_name} ({len(df_pivot)} righe)")
 

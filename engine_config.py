@@ -131,7 +131,7 @@ REPORT_SHEET_CONFIG = {
         "name": "Average Vehicle Speed",
         "use_percentage_columns": False,
         "columns": ["Average_vehicle_speed"],
-        "group_by": ["Average_vehicle_speed_split"],
+        "group_by": ["mileage_range"],
         "trigger": 0,
         "zero_as_null": True,
     },
@@ -173,6 +173,7 @@ REPORT_SHEET_CONFIG = {
         "columns": ["crank_100km"],
         "group_by": ["product_model"],
         "trigger": 1,
+        "scale": 0.1,
         "zero_as_null": True,
     },
     "average_crank_per_100km_2": {
@@ -181,6 +182,7 @@ REPORT_SHEET_CONFIG = {
         "columns": ["crank_100km"],
         "group_by": ["product_group"],
         "trigger": 1,
+        "scale": 0.1,
         "zero_as_null": True,
     },
     "engine_over_speed": {
@@ -763,6 +765,7 @@ def get_sheet_settings(sheet_id):
         "use_percentage_columns": conf.get("use_percentage_columns", True),
         "zero_as_null": conf.get("zero_as_null", False),
         "max_value": conf.get("max_value"),
+        "scale": conf.get("scale", 1),
     }
 
 

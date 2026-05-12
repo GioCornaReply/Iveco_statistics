@@ -2,6 +2,7 @@
 data/sample/
 data/output/
 Excel_statistics/*.xlsx
+Excel_statistics/**/*.xlsx
 
 # Python local artifacts.
 __pycache__/

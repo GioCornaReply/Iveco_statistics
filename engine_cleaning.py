@@ -61,7 +61,7 @@ def keep_latest_record_per_vin(
 
 def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
     """Ricrea localmente alcune colonne prodotte dal vecchio notebook Prep."""
-    if "product_model" in df.columns and "engine_model" not in df.columns:
+    if "product_model" in df.columns:
         df = engine_model_standard(df)
 
     if "mileage" not in df.columns and "cov_div_len" in df.columns:
@@ -142,15 +142,35 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
 
 def engine_model_standard(df: DataFrame) -> DataFrame:
     """Mappatura standard per i modelli motore basata sui codici prodotto."""
-    return df.withColumn("engine_model", 
-        F.when(F.col("product_model").startswith("F1A"), "F1A")
-         .when(F.col("product_model").startswith("F1C"), "F1C")
-         .when(F.col("product_model").startswith("F4AF"), "Tector 5")
-         .when(F.col("product_model").startswith("F4BE"), "Tector 7")
-         .when(F.col("product_model").startswith("F2BE"), "Cursor 9")
-         .when(F.col("product_model").startswith("F3GE"), "Cursor 11")
-         .when(F.col("product_model").startswith("F3HE"), "Cursor 13")
-         .otherwise("Unknown")
+    product_model = F.upper(F.coalesce(F.col("product_model").cast("string"), F.lit("")))
+    power = (
+        F.upper(F.coalesce(F.col("power").cast("string"), F.lit("")))
+        if "power" in df.columns
+        else F.lit("")
+    )
+
+    derived_engine = (
+        F.when(product_model.startswith("F1A"), "F1A")
+        .when(product_model.startswith("F1C"), "F1C")
+        .when(product_model.startswith("F4AF"), "Tector 5")
+        .when(product_model.startswith("F4BE"), "Tector 7")
+        .when(product_model.startswith("F2BE") | product_model.contains("C9") | power.contains("C9"), "Cursor 9")
+        .when(product_model.startswith("F3GE") | product_model.contains("C11") | power.contains("C11"), "Cursor 11")
+        .when(product_model.startswith("F3HE") | product_model.contains("C13") | power.contains("C13"), "Cursor 13")
+        .otherwise("Unknown")
+    )
+
+    if "engine_model" not in df.columns:
+        return df.withColumn("engine_model", derived_engine)
+
+    current_engine = F.upper(F.coalesce(F.col("engine_model").cast("string"), F.lit("")))
+    return df.withColumn(
+        "engine_model",
+        F.when(
+            F.col("engine_model").isNull()
+            | current_engine.isin("", "NA", "N/A", "UNKNOWN", "UNKNOW", "NONE", "NULL"),
+            derived_engine,
+        ).otherwise(F.col("engine_model")),
     )
 
 # --- RIDENOMINAZIONE UFFICIALE ---
