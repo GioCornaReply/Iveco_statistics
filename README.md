@@ -85,6 +85,12 @@ Per lanciare solo alcuni sheet:
 python -m run_local_sample --sheets fuel_consumption 2a 5a_dpf
 ```
 
+Se `python` non e' nel PATH, usa l'interprete configurato in VS Code:
+
+```powershell
+C:\Users\g.cornacchia\AppData\Local\Python\bin\python.exe -m run_local_sample --no-excel
+```
+
 ## Notebook Modulare
 
 `Main_pipeline_modular.ipynb` e' il punto di controllo visuale:
@@ -98,10 +104,12 @@ python -m run_local_sample --sheets fuel_consumption 2a 5a_dpf
 7. esporta l'Excel.
 
 Gli sheet sono configurati in `engine_config.py`; il notebook non deve contenere liste hardcoded.
+La lista default contiene 58 sheet configurati, incluso `Complete Dataset`, piu' i fogli duplicati legacy come `1a_2`, `1c_2`, `3e_2`, `4c_2` e `5a_dpf_2`.
 
 ## Note Di Migrazione
 
 - `Old_statistics/Threshold_old.py` e' tenuto come riferimento legacy/inventory.
+- Gli export legacy pesanti in `Old_statistics/` sono esclusi dall'analisi Python di VS Code: contengono magic Databricks (`%run`, `%matplotlib`, `pip install`) e quindi non sono validi script locali.
 - Le regole nuove vanno spostate nel modulo giusto, non incollate nel notebook.
 - Se uno sheet legacy non appare, prima controlla `engine_config.py` e poi la presenza colonne nel sample.
 - Le statistiche trattano esplicitamente gli zeri/null quando lo sheet lo richiede (`zero_as_null`).

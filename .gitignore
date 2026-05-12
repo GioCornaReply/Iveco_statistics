@@ -10,3 +10,9 @@ __pycache__/
 metastore_db/
 spark-warehouse/
 derby.log
+
+# Legacy notebook exports kept only as local references.
+Old_statistics/*.ipynb
+Old_statistics/*TIME_PERCENTAGE*.py
+Old_statistics/Utils (2).py
+Old_statistics/__pycache__/

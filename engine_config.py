@@ -17,6 +17,7 @@ SHEET_ALIASES = {
 }
 
 DEFAULT_REPORT_SHEETS = [
+    "complete_dataset",
     "urea_consumption_pct",
     "fuel_consumption",
     "fuel_consumption_2",
@@ -36,8 +37,10 @@ DEFAULT_REPORT_SHEETS = [
     "catalyst_info_v2",
     "max_values",
     "1a",
+    "1a_2",
     "1b",
     "1c",
+    "1c_2",
     "1d",
     "2a",
     "2b",
@@ -50,16 +53,19 @@ DEFAULT_REPORT_SHEETS = [
     "3c_1",
     "3d",
     "3e",
+    "3e_2",
     "3f",
     "4a_1",
     "4a",
     "4b",
     "4c",
+    "4c_2",
     "4d",
     "4e",
     "4f",
     "4h",
     "5a_dpf",
+    "5a_dpf_2",
     "5b",
     "5c",
     "5d",
@@ -72,6 +78,11 @@ DEFAULT_REPORT_SHEETS = [
 ]
 
 REPORT_SHEET_CONFIG = {
+    "complete_dataset": {
+        "name": "Complete Dataset",
+        "kind": "dataset",
+        "use_percentage_columns": False,
+    },
     "urea_consumption_pct": {
         "name": "Urea Consumption %",
         "use_percentage_columns": False,
@@ -278,7 +289,32 @@ REPORT_SHEET_CONFIG = {
         ],
     },
     "1a": {
-        "name": "1a) Engine Torque / Engine Speed",
+        "name": "1a_1 EngineTorque | EngineSpeed",
+        "group_by": ["engine_model", "power", "mission"],
+        "triggers": [1, 0, 1, 1, 0, 1, 1, 1],
+        "new_layout": [
+            "tor_rev_cutoff",
+            "tor_rev_low",
+            "tor_rev_lowlow",
+            "tor_rev_high_1",
+            "tor_rev_opt",
+            "tor_rev_highlow",
+            "tor_rev_high_2",
+        ],
+        "legacy": [
+            "region1_torque_enginespeed",
+            "region2_torque_enginespeed",
+            "region3_torque_enginespeed",
+            "region4_torque_enginespeed",
+            "region5_torque_enginespeed",
+            "region6_torque_enginespeed",
+            "region7_torque_enginespeed",
+        ],
+    },
+    "1a_2": {
+        "name": "1a_2 EngineTorque | EngineSpeed",
+        "group_by": ["engine_model"],
+        "triggers": [1, 0, 1, 1, 0, 1, 1, 1],
         "new_layout": [
             "tor_rev_cutoff",
             "tor_rev_low",
@@ -299,7 +335,9 @@ REPORT_SHEET_CONFIG = {
         ],
     },
     "1b": {
-        "name": "1b) Engine Torque / Vehicle Speed",
+        "name": "1b EngineTorque | VehicleSpeed",
+        "group_by": ["engine_model", "power", "mission"],
+        "triggers": [0, 1, 1, 1, 1, 0, 0, 0, 1],
         "groups": {
             "EUROCARGO": [
                 "tor_speed_cutoff",
@@ -336,7 +374,22 @@ REPORT_SHEET_CONFIG = {
         ],
     },
     "1c": {
-        "name": "1c) Engine Revolutions",
+        "name": "1c Engine Revolutions",
+        "group_by": ["engine_model"],
+        "triggers": [1, 0, 1, 1, 1],
+        "groups": {"EUROCARGO": ["eng_speed_1", "eng_speed_2", "eng_speed_3"]},
+        "new_layout": ["eng_speed_1", "eng_speed_2", "eng_speed_3", "eng_speed_4", "eng_speed_5"],
+        "legacy": [
+            "engine_revolutions_low",
+            "engine_revolutions_OK",
+            "engine_revolutions_medium",
+            "engine_revolutions_high2",
+        ],
+    },
+    "1c_2": {
+        "name": "1c Engine Revolutions 2",
+        "group_by": ["engine_model", "power", "mission"],
+        "triggers": [1, 0, 1, 1, 1],
         "groups": {"EUROCARGO": ["eng_speed_1", "eng_speed_2", "eng_speed_3"]},
         "new_layout": ["eng_speed_1", "eng_speed_2", "eng_speed_3", "eng_speed_4", "eng_speed_5"],
         "legacy": [
@@ -347,19 +400,25 @@ REPORT_SHEET_CONFIG = {
         ],
     },
     "1d": {
-        "name": "1d) Turbo Overspeed",
+        "name": "1d Turbine Overspeed",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1, 1],
         "skip_groups": {"EUROCARGO"},
         "new_layout": ["turb_speed_1", "turb_speed_2", "turb_speed_3", "turb_speed_4"],
         "legacy": ["region1_turborev", "region2_turborev", "region3_turborev"],
     },
     "2a": {
-        "name": "2a) Oil Pressure",
+        "name": "2a Oil Pressure",
+        "group_by": ["engine_model", "mission"],
+        "triggers": [0, 1, 1],
         "groups": {"EUROCARGO": ["p_oil_ok_1", "p_oil_tbc", "p_oil_low", "p_oil_low_1"]},
         "new_layout": ["p_oil_ok_1", "p_oil_tbc_1", "p_oil_low_1"],
         "legacy": ["oilpressure_low1", "oilpressure_tocheck1", "oilpressure_ok1"],
     },
     "2b": {
-        "name": "2b) Oil Sump Pressure",
+        "name": "2b Oil Pressure in Sump",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1],
         "skip_groups": {"EUROCARGO"},
         "new_layout": ["p_sump_ok_1", "p_sump_tbc_1", "p_sump_crit_1"],
         "legacy": [
@@ -369,49 +428,76 @@ REPORT_SHEET_CONFIG = {
         ],
     },
     "2c": {
-        "name": "2c) Oil Temperature",
+        "name": "2c Oil Temperature",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1],
         "groups": {"EUROCARGO": ["oil_t_ok", "oil_t_high"]},
         "new_layout": ["oil_t_ok", "oil_t_high"],
         "legacy": ["oiltemp1", "oiltemp2"],
     },
     "3a": {
-        "name": "3a) Coolant Temperature",
+        "name": "3a Engine Coolant Temperature",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1],
         "groups": {"EUROCARGO": ["eng_t_cool_1", "eng_t_cool_2", "eng_t_cool_3"]},
         "new_layout": ["eng_t_cool_1", "eng_t_cool_2", "eng_t_cool_3"],
         "legacy": ["region1_coolantT", "region2_coolantT", "region3_coolantT"],
     },
     "3a_1": {
-        "name": "3a.1) Coolant Pressure",
+        "name": "3a_1 Engine Coolant Temperature",
         "columns": ["eng_t_p_cool_1", "eng_t_p_cool_2", "eng_t_p_cool_3", "eng_t_p_cool_4", "eng_t_p_cool_5"],
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1, 1, 1],
     },
     "3a_2": {
         "name": "3a_2) Coolant pressure",
         "columns": ["eng_p_cool_1", "eng_p_cool_2", "eng_p_cool_3", "eng_p_cool_4"],
+        "group_by": ["engine_model"],
         "triggers": [0, 1, 1, 1],
     },
     "3b": {
-        "name": "3b) Fuel Temperature",
+        "name": "3b Fuel Temperature",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1],
         "groups": {"EUROCARGO": ["fuel_t_1", "fuel_t_2", "fuel_t_3"]},
         "new_layout": ["fuel_t_1", "fuel_t_2", "fuel_t_3"],
         "legacy": ["fueltemp1", "fueltemp2", "fueltemp3"],
     },
     "3c": {
-        "name": "3c) Intake Air Temperature",
+        "name": "3d Intake air temperature",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1, 1],
         "groups": {"EUROCARGO": ["int_air_t_1", "int_air_t_2", "int_air_t_3", "int_air_t_4"]},
         "new_layout": ["int_air_t_1", "int_air_t_2", "int_air_t_3", "int_air_t_4"],
     },
     "3c_1": {
-        "name": "3c.1) Fuel Pre-Filter Pressure",
+        "name": "3c_1 pressure sensor of fuel",
         "columns": ["fuel_prefilter_p_low", "fuel_prefilter_p_ok", "fuel_prefilter_p_high"],
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 0],
     },
     "3d": {
-        "name": "3d) Intake Air Pressure",
+        "name": "3e Intake air pressure",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1, 1],
         "groups": {"EUROCARGO": ["int_air_p_1", "int_air_p_2", "int_air_p_3", "int_air_p_4"]},
         "new_layout": ["int_air_p_1", "int_air_p_2", "int_air_p_3", "int_air_p_4"],
         "legacy": ["EGR_position1", "EGR_position2", "EGR_position3"],
     },
     "3e": {
-        "name": "3e) Flap Actuator Position",
+        "name": "3e Flap Actuator Position",
+        "group_by": ["engine_model", "mission"],
+        "triggers": [0, 1, 1, 1],
+        "groups": {
+            "EUROCARGO": ["flap_position_1", "flap_position_2", "flap_position_3", "flap_position_4"]
+        },
+        "new_layout": ["flap_position_1", "flap_position_2", "flap_position_3", "flap_position_4"],
+        "legacy": ["Flap1", "Flap2", "Flap3", "Flap4"],
+    },
+    "3e_2": {
+        "name": "3e Flap Actuator Position 2",
+        "group_by": ["engine_model", "power", "mission"],
+        "triggers": [0, 1, 1, 1],
         "groups": {
             "EUROCARGO": ["flap_position_1", "flap_position_2", "flap_position_3", "flap_position_4"]
         },
@@ -419,7 +505,9 @@ REPORT_SHEET_CONFIG = {
         "legacy": ["Flap1", "Flap2", "Flap3", "Flap4"],
     },
     "3f": {
-        "name": "3f) EGR Actuator Position",
+        "name": "3f Flap actuator position",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1, 1],
         "skip_groups": {"EUROCARGO"},
         "new_layout": ["egr_position_1", "egr_position_2", "egr_position_3"],
     },
@@ -431,13 +519,17 @@ REPORT_SHEET_CONFIG = {
         "new_layout": ["cat_eff_scr_1_a", "cat_eff_scr_1_b", "cat_eff_scr_1_c", "cat_eff_scr_1_d"],
     },
     "4a": {
-        "name": "4a) Catalyst Efficiency",
+        "name": "4a Catalyst Efficiency g|kWh",
+        "group_by": ["engine_model", "power", "mileage_range"],
+        "triggers": [0, 1, 1],
         "groups": {"EUROCARGO": ["cat_eff_scr_2_a", "cat_eff_scr_2_b", "cat_eff_scr_2_c"]},
         "new_layout": ["cat_eff_scr_2_a", "cat_eff_scr_2_b", "cat_eff_scr_2_c"],
         "legacy": ["regionA_catalyst_BAD", "regionB_catalyst_BAD", "regionCD_catalyst_BAD"],
     },
     "4b": {
-        "name": "4b) Catalyst Efficiency vs Engine Speed",
+        "name": "4b Catalyst Eff vs Eng Speed",
+        "group_by": ["engine_model", "power", "mileage_range", "mission"],
+        "triggers": [1, 1, 1, 0],
         "groups": {"EUROCARGO": ["cat_eff_0_40", "cat_eff_40_65", "cat_eff_65_90", "cat_eff_90_100"]},
         "new_layout": ["cat_eff_0_40", "cat_eff_40_65", "cat_eff_65_90", "cat_eff_90_100"],
         "legacy": [
@@ -448,13 +540,25 @@ REPORT_SHEET_CONFIG = {
         ],
     },
     "4c": {
-        "name": "4c) HC Accumulated in SCR Catalyst",
+        "name": "4c HC SCR Catalys",
+        "group_by": ["product_group"],
+        "triggers": [0, 1, 1, 1],
+        "groups": {"EUROCARGO": ["hc_accum_scr_1", "hc_accum_scr_2", "hc_accum_scr_3", "hc_accum_scr_4"]},
+        "new_layout": ["hc_accum_scr_1", "hc_accum_scr_2", "hc_accum_scr_3", "hc_accum_scr_4"],
+        "legacy": ["region1_hc", "region2_hc", "region3_hc", "region4_hc"],
+    },
+    "4c_2": {
+        "name": "4c HC accum in SCR Catalyst 2",
+        "group_by": ["product_group"],
+        "triggers": [0, 1, 1, 1],
         "groups": {"EUROCARGO": ["hc_accum_scr_1", "hc_accum_scr_2", "hc_accum_scr_3", "hc_accum_scr_4"]},
         "new_layout": ["hc_accum_scr_1", "hc_accum_scr_2", "hc_accum_scr_3", "hc_accum_scr_4"],
         "legacy": ["region1_hc", "region2_hc", "region3_hc", "region4_hc"],
     },
     "4d": {
-        "name": "4d) NH3 Concentration",
+        "name": "4d NH3 Concentration",
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1, 1],
         "groups": {"EUROCARGO": ["urea_dep_1", "urea_dep_2", "urea_dep_3", "urea_dep_4"]},
         "new_layout": ["nh3_conc_1", "nh3_conc_2", "nh3_conc_3"],
         "legacy": ["region1_NH3", "region2_NH3", "regipn3_NH3"],
@@ -478,7 +582,22 @@ REPORT_SHEET_CONFIG = {
         "legacy": ["SCRdwntemp1", "SCRdwntemp2", "SCRdwntemp3"],
     },
     "5a_dpf": {
-        "name": "5a) DPF Upstream Temperature",
+        "name": "5a DPF Upstream Temperature",
+        "group_by": ["product_group"],
+        "triggers": [1],
+        "groups": {
+            "EUROCARGO": ["dpf_upstr_t_1", "dpf_upstr_t_2", "dpf_upstr_t_3"],
+            "IVECO_X_WAY": ["dpf_upstr_t_1", "dpf_upstr_t_2", "dpf_upstr_t_3"],
+            "IVECO_T_WAY": ["dpf_upstr_t_1", "dpf_upstr_t_2", "dpf_upstr_t_3"],
+            "IVECO_S_WAY": ["dpf_upstr_t_1", "dpf_upstr_t_2", "dpf_upstr_t_3"],
+        },
+        "skip_series": {"S_WAY_AS_E3", "S_WAY_AS_E5"},
+        "legacy": ["DPFup1", "DPFup2", "DPFup3"],
+    },
+    "5a_dpf_2": {
+        "name": "5a DPF Upstream Temperature 2",
+        "group_by": ["product_group"],
+        "triggers": [1, 0, 1],
         "groups": {
             "EUROCARGO": ["dpf_upstr_t_1", "dpf_upstr_t_2", "dpf_upstr_t_3"],
             "IVECO_X_WAY": ["dpf_upstr_t_1", "dpf_upstr_t_2", "dpf_upstr_t_3"],
@@ -489,7 +608,9 @@ REPORT_SHEET_CONFIG = {
         "legacy": ["DPFup1", "DPFup2", "DPFup3"],
     },
     "5b": {
-        "name": "5b) Regeneration Strategies",
+        "name": "5b Regeneration Strategies",
+        "group_by": ["engine_model", "power", "mileage_range"],
+        "trigger": 1,
         "groups": {
             "EUROCARGO": [
                 "regen_strategy_1",
@@ -512,14 +633,18 @@ REPORT_SHEET_CONFIG = {
         "legacy": ["DPFreg1", "DPFreg2", "DPFreg3", "DPFreg4", "DPFreg5"],
     },
     "5c": {
-        "name": "5c) DPF Differential Pressure",
+        "name": "5c) Diff pressure of DPF",
+        "group_by": ["engine_model", "power", "mileage_range"],
+        "trigger": 1,
         "groups": {"EUROCARGO": ["dpf_diff_p_1", "dpf_diff_p_2", "dpf_diff_p_3", "dpf_diff_p_4"]},
         "new_layout": ["dpf_diff_p_1", "dpf_diff_p_2", "dpf_diff_p_3", "dpf_diff_p_4"],
         "skip_series": {"S_WAY_AS_E3", "S_WAY_AS_E5"},
         "legacy": ["deltap_flux_ok1", "deltap_flux_highpr1", "deltap_flux_lowpr1", "deltap_flux_nok1"],
     },
     "5d": {
-        "name": "5d) Soot Mass Estimated",
+        "name": "5d Soot mass estimated",
+        "group_by": ["engine_model", "mileage_range"],
+        "triggers": [0, 0, 1, 1, 1, 1],
         "groups": {
             "EUROCARGO": [
                 "soot_mass_0_30",
@@ -630,6 +755,7 @@ def get_sheet_settings(sheet_id):
     conf = REPORT_SHEET_CONFIG.get(sheet_id, {})
     return {
         "name": conf.get("name", sheet_id),
+        "kind": conf.get("kind", "pivot"),
         "group_by": conf.get("group_by", ["product_group"]),
         "trigger": conf.get("trigger", 1),
         "triggers": conf.get("triggers"),

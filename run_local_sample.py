@@ -123,6 +123,10 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
     present_cols = validation_entry["present"]
     group_by = [col_name for col_name in settings["group_by"] if col_name in df.columns]
 
+    if settings["kind"] == "dataset":
+        log_step(f"Sheet {sheet_id}: export diretto del dataset completo")
+        return df.toPandas(), settings["name"]
+
     if not present_cols:
         log_step(f"Sheet {sheet_id}: nessuna colonna presente, export saltato")
         return None, settings["name"]

@@ -1,0 +1,221 @@
+# pyright: reportUndefinedVariable=false, reportMissingImports=false
+"""Legacy Databricks snapshot: MT_HEAVY_SXT_VARIABILI_X.
+
+Questa versione salva il codice incollato nel prompt come riferimento
+consultabile da VS Code. Le magic Databricks sono mantenute come commenti,
+perche' il runner locale usa i moduli `engine_*`.
+"""
+
+from engine_stats import pyspark_variabili_x
+
+
+# MAGIC %run ../Utils
+# MAGIC %run ../PT_variables_names
+
+# DOMANDA PER SILVIA: perche qui non c'e' "if"?
+# DOMANDA PER SILVIA: perche config puo cambiare da notebook a notebook?
+
+# config = {260, 288}              # S-WAY ### 31611
+# config = (298, 299)              # S-WAY ### 161
+# config = [286, 287]              # X-WAY 6.0.3 ### 4631
+# config = [290]                   # T-WAY ### 932
+# config = {300, 301, 335, 336}    # S-WAY MY22 SW7.6.1 ### 4430
+# config = {300, 301}
+# config = [302, 303, 337, 338]    # X-WAY my 22 step E ### 324
+# config = [304, 339]              # T-WAY step E ### 99
+# config = {335, 336}
+# config = {36, 76, 77}            # EUROCARGO
+# config = {76, 77}                # EUROCARGO
+# config = {367}                   # S-WAY LATAM
+# config = {368, 371}              # S-WAY_AS_E3
+# config = {372, 373}              # S-WAY_AS_E5
+# config = {389, 390}
+# config = {393, 394}
+# config = {304, 339}
+# config = {380, 391, 392}
+# config = {395}                   # T-WAY MY24
+# config = {369}
+config = {399}
+
+print(bold_start, "Let's analyze the config:", config, bold_end)
+last_running()
+
+"""PREPARATION MISSION TEST"""
+vin_selection = False  # DEFAULT: False
+keep_update = False  # DEFAULT: False
+save_dataset = False  # DEFAULT: False
+
+# MAGIC %run ./MT_HEAVY_SXT_TIME_PERCENTAGE
+
+if product_group in {"IVECO_T-WAY", "IVECO_T_WAY", "IVECO_S-WAY", "IVECO_S_WAY"}:
+    col_list_1a = [
+        "tor_rev_cutoff",
+        "tor_rev_low",
+        "tor_rev_lowlow",
+        "tor_rev_high_1",
+        "tor_rev_opt",
+        "tor_rev_highlow",
+        "tor_rev_high_2",
+    ]
+    df = pyspark_variabili_x(df, col_list_1a, "1a")
+    print("i'm in the first spot")
+else:
+    df = pyspark_variabili_x(df, col_list_1a, "1a")
+    print("i'm in the second spot")
+
+if set(col_list_1b).issubset(set(df.columns)):
+    df = pyspark_variabili_x(df, col_list_1b, "1b")
+
+if product_group in {"Eurocargo", "EUROCARGO"}:
+    col_list_1c = ["eng_speed_1", "eng_speed_2", "eng_speed_3"]
+elif product_series in {
+    "S-WAY_AS_E3",
+    "S-WAY_AS_E5",
+    "S-WAY_AS_MY_2024",
+    "X-WAY_AS_MY_2024",
+    "T-WAY_MY_2024",
+    "S-WAY_AT-AD_MY_2024",
+    "S_WAY_AS_E3",
+    "S_WAY_AS_E5",
+    "S_WAY_AS_MY_2024",
+    "X_WAY_AS_MY_2024",
+    "T_WAY_MY_2024",
+    "S_WAY_AT_AD_MY_2024",
+}:
+    col_list_1c = ["eng_speed_1", "eng_speed_2", "eng_speed_3", "eng_speed_4", "eng_speed_5"]
+else:
+    col_list_1c = [
+        "engine_revolutions_low",
+        "engine_revolutions_OK",
+        "engine_revolutions_medium",
+        "engine_revolutions_high2",
+    ]
+
+df = pyspark_variabili_x(df, col_list_1c, "1c")
+df = pyspark_variabili_x(df, col_list_1d, "1d")
+df = pyspark_variabili_x(df, col_list_2a, "2a")
+df = pyspark_variabili_x(df, col_list_2b, "2b")
+df = pyspark_variabili_x(df, col_list_2c, "2c")
+df = pyspark_variabili_x(df, col_list_3a, "3a")
+
+if set(col_list_3a_1).issubset(set(df.columns)):
+    df = pyspark_variabili_x(df, col_list_3a_1, "3a_1")
+
+df = pyspark_variabili_x(df, col_list_3b, "3b")
+
+col_list_3c = ["int_air_t_1", "int_air_t_2", "int_air_t_3", "int_air_t_4"]
+if set(col_list_3c).issubset(set(df.columns)):
+    df = pyspark_variabili_x(df, col_list_3c, "3c")
+
+if set(col_list_3c_1).issubset(set(df.columns)):
+    df = pyspark_variabili_x(df, col_list_3c_1, "3c_1")
+
+df = pyspark_variabili_x(df, col_list_3e, "3e")
+df = pyspark_variabili_x(df, col_list_4a, "4a")
+df = pyspark_variabili_x(df, col_list_4b, "4b")
+df = pyspark_variabili_x(df, col_list_4c, "4c")
+df = pyspark_variabili_x(df, col_list_4f, "4f")
+df = pyspark_variabili_x(df, col_list_4h, "4h")
+
+if product_group in {"Eurocargo", "EUROCARGO", "IVECO_X-WAY", "IVECO_X_WAY"}:
+    col_list_5b = [
+        "regen_strategy_1",
+        "regen_strategy_2",
+        "regen_strategy_3",
+        "regen_strategy_4",
+        "regen_strategy_5",
+        "regen_strategy_6",
+    ]
+elif product_series in {
+    "S-WAY_AS_E3",
+    "S-WAY_AS_E5",
+    "S-WAY_AS_MY_2024",
+    "T-WAY_MY_2024",
+    "S-WAY_AT-AD_MY_2024",
+    "S_WAY_AS_E3",
+    "S_WAY_AS_E5",
+    "S_WAY_AS_MY_2024",
+    "T_WAY_MY_2024",
+    "S_WAY_AT_AD_MY_2024",
+}:
+    col_list_5b = [
+        "regen_strategy_1",
+        "regen_strategy_2",
+        "regen_strategy_3",
+        "regen_strategy_4",
+        "regen_strategy_5",
+        "regen_strategy_6",
+    ]
+elif product_series in {"S-WAY_AS_ANZ", "S_WAY_AS_ANZ"}:
+    col_list_5b = ["DPFreg1", "DPFreg2", "DPFreg3", "DPFreg4", "DPFreg5"]
+else:
+    col_list_5b = ["RegenStrategy1", "RegenStrategy2", "RegenStrategy3", "RegenStrategy4", "RegenStrategy5"]
+
+print("col_list_5b:", col_list_5b)
+df = pyspark_variabili_x(df, col_list_5b, "5b")
+
+if product_group in {"Eurocargo", "EUROCARGO", "IVECO_T-WAY", "IVECO_T_WAY", "IVECO_S-WAY", "IVECO_S_WAY"}:
+    col_list_5c = ["dpf_diff_p_1", "dpf_diff_p_2", "dpf_diff_p_3", "dpf_diff_p_4"]
+else:
+    col_list_5c = ["deltap_flux_ok1", "deltap_flux_highpr1", "deltap_flux_lowpr1", "deltap_flux_nok1"]
+
+print("col_list_5c:", col_list_5c)
+df = pyspark_variabili_x(df, col_list_5c, "5c")
+
+if product_group in {"Eurocargo", "EUROCARGO"}:
+    col_list_5d = [
+        "soot_mass_0_30",
+        "soot_mass_30_60",
+        "soot_mass_60_80",
+        "soot_mass_80_100",
+        "soot_mass_100_150",
+        "soot_mass_150_200",
+    ]
+elif product_series in {
+    "S-WAY_AS_E3",
+    "S-WAY_AS_E5",
+    "S-WAY_AS_MY_2024",
+    "X-WAY_AS_MY_2024",
+    "T-WAY_MY_2024",
+    "S-WAY_AT-AD_MY_2024",
+    "S_WAY_AS_E3",
+    "S_WAY_AS_E5",
+    "S_WAY_AS_MY_2024",
+    "X_WAY_AS_MY_2024",
+    "T_WAY_MY_2024",
+    "S_WAY_AT_AD_MY_2024",
+}:
+    col_list_5d = [
+        "soot_mass_0_30",
+        "soot_mass_30_60",
+        "soot_mass_60_80",
+        "soot_mass_80_100",
+        "soot_mass_100_150",
+        "soot_mass_150_200",
+    ]
+elif product_series in {"S-WAY_AS_ANZ", "S_WAY_AS_ANZ"}:
+    col_list_5d = ["flowres_soot_1", "flowres_soot_2", "flowres_soot_3", "flowres_soot_4"]
+else:
+    col_list_5d = ["SootMass30", "SootMass60", "SootMass100"]
+
+df = pyspark_variabili_x(df, col_list_5d, "5d")
+
+col_list_6a = ["eng_brake_status_1", "eng_brake_status_2", "eng_brake_status_3"]
+if set(col_list_6a).issubset(set(df.columns)):
+    df = pyspark_variabili_x(df, col_list_6a, "6a")
+
+col_list_6b = [
+    "brak_torque_req_1",
+    "brak_torque_req_2",
+    "brak_torque_req_3",
+    "brak_torque_req_4",
+    "brak_torque_req_5",
+    "brak_torque_req_6",
+    "brak_torque_req_7",
+    "brak_torque_req_8",
+]
+
+if set(col_list_6b).issubset(set(df.columns)):
+    df = pyspark_variabili_x(df, col_list_6b, "6b")
+
+MT_HEAVY_SXT_VARIABILI_X = df

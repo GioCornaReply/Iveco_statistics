@@ -1,4 +1,7 @@
 {
   "python.defaultInterpreterPath": "C:\\Users\\g.cornacchia\\AppData\\Local\\Python\\bin\\python.exe",
-  "python.terminal.activateEnvironment": true
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.exclude": [
+    "Old_statistics/**"
+  ]
 }
