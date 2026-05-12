@@ -2,10 +2,10 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run local sample",
+      "name": "Run local sample Excel",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/run_local_sample.py",
+      "module": "run_local_sample",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "args": [
@@ -15,6 +15,31 @@
         "parquet",
         "--output-dir",
         "data/output"
+      ],
+      "env": {
+        "HADOOP_HOME": "C:\\hadoop",
+        "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.19.10-hotspot",
+        "PATH": "C:\\hadoop\\bin;C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.19.10-hotspot\\bin;${env:PATH}",
+        "PYSPARK_PYTHON": "C:\\Users\\g.cornacchia\\AppData\\Local\\Python\\bin\\python.exe",
+        "PYSPARK_DRIVER_PYTHON": "C:\\Users\\g.cornacchia\\AppData\\Local\\Python\\bin\\python.exe"
+      },
+      "justMyCode": true
+    },
+    {
+      "name": "Validate local sample",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "run_local_sample",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "--sample-path",
+        "data/sample/Subset_Config_399_Date_20260511_123241",
+        "--format",
+        "parquet",
+        "--output-dir",
+        "data/output",
+        "--no-excel"
       ],
       "env": {
         "HADOOP_HOME": "C:\\hadoop",

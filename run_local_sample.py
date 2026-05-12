@@ -11,11 +11,16 @@ import sys
 
 import pandas as pd
 from pyspark.sql import SparkSession
+import pyspark.sql.functions as F
 
-from engine_cleaning import clean_spark_column_names, keep_latest_record_per_vin
+from engine_cleaning import (
+    add_legacy_preparation_features,
+    clean_spark_column_names,
+    keep_latest_record_per_vin,
+)
 from engine_config import get_columns_for_sheet, get_default_sheet_ids, get_sheet_settings
 from engine_loader import extract_metadata
-from engine_stats import pyspark_variabili_x, report_pivot_pyspark
+from engine_stats import pyspark_variabili_x, report_pivot_pyspark_fixed
 from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
 
 
@@ -132,8 +137,35 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
         df_stats = df
         pivot_cols = present_cols
 
-    triggers = [settings["trigger"]] * len(pivot_cols)
-    df_pivot = report_pivot_pyspark(df_stats, pivot_cols, group_by, triggers)
+    if settings["zero_as_null"]:
+        for col_name in pivot_cols:
+            df_stats = df_stats.withColumn(
+                col_name,
+                F.when(F.col(col_name).cast("double") == 0, None).otherwise(F.col(col_name)),
+            )
+
+    if settings["max_value"] is not None:
+        for col_name in pivot_cols:
+            df_stats = df_stats.withColumn(
+                col_name,
+                F.when(F.col(col_name).cast("double") < settings["max_value"], F.col(col_name)),
+            )
+
+    configured_triggers = settings["triggers"]
+    if configured_triggers:
+        triggers = list(configured_triggers[: len(pivot_cols)])
+        if len(triggers) < len(pivot_cols):
+            triggers.extend([settings["trigger"]] * (len(pivot_cols) - len(triggers)))
+    else:
+        triggers = [settings["trigger"]] * len(pivot_cols)
+
+    df_pivot = report_pivot_pyspark_fixed(
+        df_stats,
+        pivot_cols,
+        group_by,
+        triggers,
+        target_columns=settings["target_columns"],
+    )
     return df_pivot, settings["name"]
 
 
@@ -234,6 +266,9 @@ def run_local_sample(
             df_clean = keep_latest_record_per_vin(df_clean)
             report_dim(df_clean, "LOCAL LATEST VIN sample")
             report_vin(df_clean)
+
+        log_step("Arricchimento colonne legacy Prep")
+        df_clean = add_legacy_preparation_features(df_clean)
 
         p_type, p_group, p_series = extract_metadata(df_clean)
         log_step(f"Metadata rilevati: type={p_type}, group={p_group}, series={p_series}")

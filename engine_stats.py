@@ -33,7 +33,9 @@ def new_soglie_pyspark(df2: DataFrame, var_soglia: str, var_altre: list, valutaz
     alert_name = f"Alert_{var_soglia}"
     
     df_mean = grouped.agg(F.round(F.avg(var_soglia), 2).alias(avg_name))
-    df_std = grouped.agg(F.round(F.stddev(var_soglia), 2).alias(stddev_name))
+    df_std = grouped.agg(
+        F.coalesce(F.round(F.stddev(var_soglia), 2), F.lit(0.0)).alias(stddev_name)
+    )
     
     df_table = df_mean.join(df_std, var_altre).dropna(how="any")
     
@@ -65,6 +67,68 @@ def prep_toPandas(df: DataFrame) -> pd.DataFrame:
     
     return df.toPandas()
 
+
+def report_pivot_pyspark_fixed(
+    df3: DataFrame,
+    lista: list,
+    variabili: list,
+    valutazione_triggers: list,
+    config_vn=0,
+    target_columns=None,
+):
+    """Versione robusta della pivot legacy: filtra colonne e join senza duplicati."""
+    if target_columns:
+        target_clean = {col_name.strip().lower() for col_name in target_columns}
+        filtered = [
+            (col_name, valutazione_triggers[idx])
+            for idx, col_name in enumerate(lista)
+            if col_name.strip().lower() in target_clean
+        ]
+        if not filtered:
+            print(f"Nessuna target_columns trovata in lista: {target_columns}")
+            return None
+        lista = [col_name for col_name, _ in filtered]
+        valutazione_triggers = [trigger for _, trigger in filtered]
+
+    if len(lista) != len(valutazione_triggers):
+        print(f"Mismatch lista/triggers: {len(lista)} vs {len(valutazione_triggers)}")
+        return None
+
+    df_uno = None
+    for col_name, trigger in zip(lista, valutazione_triggers):
+        if col_name not in df3.columns:
+            print(f"Colonna non presente, salto: {col_name}")
+            continue
+
+        try:
+            df_col = new_soglie_pyspark(df3, col_name, variabili, trigger)
+            if df_col is None:
+                print(f"{col_name}: risultato vuoto, salto")
+                continue
+
+            if df_uno is None:
+                df_uno = df_col
+                continue
+
+            duplicate_cols = set(df_uno.columns).intersection(df_col.columns) - set(variabili)
+            if duplicate_cols:
+                df_col = df_col.drop(*duplicate_cols)
+
+            if not all(col_name in df_col.columns for col_name in variabili):
+                print(f"{col_name}: colonne join mancanti, salto")
+                continue
+
+            df_uno = df_uno.join(df_col, on=variabili, how="outer")
+        except Exception as e:
+            print(f"Errore su {col_name}: {e}")
+            continue
+
+    if df_uno is None:
+        return None
+
+    return prep_toPandas(df_uno)
+
+
 def report_pivot_pyspark(df3: DataFrame, lista: list, variabili: list, valutazione_triggers: list):
     df_uno = None
     for i in range(len(lista)):
@@ -82,3 +146,8 @@ def report_pivot_pyspark(df3: DataFrame, lista: list, variabili: list, valutazio
     if df_uno is not None:
         return prep_toPandas(df_uno)
     return None
+
+
+def report_pivot_pyspark(df3: DataFrame, lista: list, variabili: list, valutazione_triggers: list):
+    """Compatibilita' con il nome storico: usa la versione robusta."""
+    return report_pivot_pyspark_fixed(df3, lista, variabili, valutazione_triggers)

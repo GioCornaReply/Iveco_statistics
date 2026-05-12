@@ -58,6 +58,86 @@ def keep_latest_record_per_vin(
         .drop("_vin_latest_rank")
     )
 
+
+def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
+    """Ricrea localmente alcune colonne prodotte dal vecchio notebook Prep."""
+    if "product_model" in df.columns and "engine_model" not in df.columns:
+        df = engine_model_standard(df)
+
+    if "mileage" not in df.columns and "cov_div_len" in df.columns:
+        df = df.withColumn("mileage", F.col("cov_div_len"))
+
+    if "Average_vehicle_speed" in df.columns:
+        speed = F.col("Average_vehicle_speed").cast("double")
+
+        if "Average_vehicle_speed_range" not in df.columns:
+            df = df.withColumn(
+                "Average_vehicle_speed_range",
+                F.when(speed < 10, "<10 km/h")
+                .when((speed >= 10) & (speed < 20), "10-20 km/h")
+                .when((speed >= 20) & (speed < 30), "20-30 km/h")
+                .when((speed >= 30) & (speed < 40), "30-40 km/h")
+                .when((speed >= 40) & (speed < 50), "40-50 km/h")
+                .when((speed >= 50) & (speed < 60), "50-60 km/h")
+                .when((speed >= 60) & (speed < 70), "60-70 km/h")
+                .when((speed >= 70) & (speed < 80), "70-80 km/h")
+                .when(speed >= 80, ">80 km/h"),
+            )
+
+        if "Average_vehicle_speed_split" not in df.columns:
+            df = df.withColumn(
+                "Average_vehicle_speed_split",
+                F.when(speed < 20, "<20 km/h")
+                .when((speed >= 20) & (speed < 40), "20-40 km/h")
+                .when(speed >= 40, ">40 km/h"),
+            )
+
+        if "mission" not in df.columns:
+            df = df.withColumn(
+                "mission",
+                F.when(speed < 20, "<20 km/h HEAVY URBAN")
+                .when((speed >= 20) & (speed < 40), "20 - 40 km/h URBAN")
+                .when(
+                    (speed >= 40) & (speed < 50),
+                    "40 - 50 km/h MIX URBAN/ MEDIUM HIGHWAY",
+                )
+                .when(speed >= 50, ">50 km/h HIGHWAY"),
+            )
+
+    mileage_col = None
+    if "mileage" in df.columns:
+        mileage_col = "mileage"
+    elif "cov_div_len" in df.columns:
+        mileage_col = "cov_div_len"
+
+    if mileage_col:
+        mileage = F.col(mileage_col).cast("double")
+
+        if "mileage_range" not in df.columns:
+            df = df.withColumn(
+                "mileage_range",
+                F.when(mileage < 10000, "<10k km")
+                .when((mileage >= 10000) & (mileage < 100000), "10k-100k km")
+                .when((mileage >= 100000) & (mileage < 200000), "100k-200k km")
+                .when((mileage >= 200000) & (mileage < 300000), "200k-300k km")
+                .when((mileage >= 300000) & (mileage < 400000), "300k-400k km")
+                .when((mileage >= 400000) & (mileage < 500000), "400k-500k km")
+                .when((mileage >= 500000) & (mileage < 600000), "500k-600k km")
+                .when((mileage >= 600000) & (mileage < 700000), "600k-700k km")
+                .when((mileage >= 700000) & (mileage < 800000), "700k-800k km")
+                .when((mileage >= 800000) & (mileage < 900000), "800k-900k km")
+                .when((mileage >= 900000) & (mileage < 1000000), "900k-1000k km")
+                .when(mileage >= 1000000, ">1000k km"),
+            )
+
+        if "mileage_split" not in df.columns:
+            df = df.withColumn(
+                "mileage_split",
+                F.when(mileage < 10000, "<10k km").when(mileage >= 10000, "over 10k km"),
+            )
+
+    return df
+
 # --- NORMALIZZAZIONE MODELLI MOTORE ---
 
 def engine_model_standard(df: DataFrame) -> DataFrame:
