@@ -2,13 +2,30 @@
 from pyspark.sql.utils import AnalysisException
 
 
+MISSION_TEST_STATISTICS_CONFIGS = {
+    399,
+    400,
+    401,
+    402,
+    405,  # X-WAY MY24 AT/AD V1.6.4 C9
+    406,  # T-WAY MY24 V1.6.4 C9
+}
+
+
+def normalize_product_group(product_group):
+    """Normalizza il gruppo prodotto per mapping stabili anche con '-' o spazi."""
+    if product_group is None:
+        return "UNKNOWN"
+    return str(product_group).strip().upper().replace(" ", "_").replace("-", "_")
+
+
 def get_table_path(val):
     """Restituisce il nome tabella Databricks in base alla config."""
     if val in {36, 76, 77}:
         return f"missiontest.fat_table_easy_{val}"
     if val == 49:
         return f"u_truck_analyzer_p.vodr_statistics.fat_table_{val}"
-    if val in {399, 400, 401, 402}:
+    if val in MISSION_TEST_STATISTICS_CONFIGS:
         return f"u_truck_analyzer_p.mission_test_statistics.fat_table_{val}"
     if val < 100:
         return f"vodr.fat_table_{val}"
@@ -50,13 +67,14 @@ def import_fat_tables_3(spark, config):
 def get_export_file_name(product_group, config):
     """Genera il nome del file Excel."""
     config_str = "_".join(map(str, sorted(config)))
+    normalized_group = normalize_product_group(product_group)
     mapping = {
         "EUROCARGO": "EUROCARGO",
         "IVECO_S_WAY": "HEAVY_SWAY",
         "IVECO_X_WAY": "HEAVY_XWAY",
         "IVECO_T_WAY": "HEAVY_TWAY",
     }
-    prefix = mapping.get(product_group, "GENERIC")
+    prefix = mapping.get(normalized_group, "GENERIC")
     return f"Statistics_{prefix}_{config_str}_dataset.xlsx"
 
 

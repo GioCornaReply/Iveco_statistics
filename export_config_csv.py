@@ -18,7 +18,7 @@ from engine_utils import get_current_timestamp, log_step, report_dim
 # CONFIGURAZIONE MANUALE
 # ---------------------------------------------------------------------------
 
-# Esempio: 49 per VODR, 399/400/401/402 per Mission Test statistics.
+# Esempio: 49 per VODR, 399/400/401/402/405/406 per Mission Test statistics.
 CONFIG_IDS = [49]
 
 # None = tutte le colonne della fat table.

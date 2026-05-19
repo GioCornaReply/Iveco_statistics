@@ -80,13 +80,20 @@ rileva Databricks tramite `dbutils` e crea widget modificabili:
 
 ```python
 input_mode  # default: "fat_table"
-config      # default: "399"; accetta anche "399,400"
+config      # default notebook: "405"; accetta anche "399,400"
 output_dir  # default: "Excel_statistics"
 ```
 
 Gli Excel generati vengono salvati nella cartella `Excel_statistics/`.
 I file `.xlsx` sono ignorati da Git, quindi puoi scaricarli quando vuoi senza
 committare dati/output pesanti nella repo.
+
+Per le richieste MY24 V1.6.4 C9, eseguire due run separate dal widget `config`:
+
+```text
+405  # X-WAY MY24 AT/AD V1.6.4 C9
+406  # T-WAY MY24 V1.6.4 C9
+```
 
 Per testare da notebook/driver Databricks con pochi sheet:
 

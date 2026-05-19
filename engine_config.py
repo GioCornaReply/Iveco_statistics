@@ -9,6 +9,8 @@ NEW_LAYOUT_SERIES = {
     "S_WAY_AS_MY_2024",
     "S_WAY_AT_AD_MY_2024",
     "X_WAY_AS_MY_2024",
+    "X_WAY_AT_AD_MY_2024",
+    "T_WAY_MY_2024",
 }
 
 SHEET_ALIASES = {
@@ -744,8 +746,25 @@ def normalize_sheet_id(sheet_id):
     return SHEET_ALIASES.get(sheet_id, sheet_id)
 
 
+def normalize_metadata_key(value):
+    """Allinea product_group/product_series prima di confrontarli con il registry."""
+    if value is None:
+        return ""
+    normalized = str(value).strip().upper()
+    for char in (" ", "-", "/", "."):
+        normalized = normalized.replace(char, "_")
+    while "__" in normalized:
+        normalized = normalized.replace("__", "_")
+    return normalized.strip("_")
+
+
 def is_new_layout_series(p_series):
-    return p_series in NEW_LAYOUT_SERIES or p_series.endswith("_MY_2024")
+    normalized_series = normalize_metadata_key(p_series)
+    return (
+        normalized_series in NEW_LAYOUT_SERIES
+        or "_MY_2024" in normalized_series
+        or "MY24" in normalized_series
+    )
 
 
 def get_default_sheet_ids():
@@ -775,6 +794,9 @@ def get_columns_for_sheet(p_series, p_group, sheet_id, available_columns=None):
     conf = REPORT_SHEET_CONFIG.get(sheet_id)
     if not conf:
         return []
+
+    p_series = normalize_metadata_key(p_series)
+    p_group = normalize_metadata_key(p_group)
 
     if p_series in conf.get("skip_series", set()) or p_group in conf.get("skip_groups", set()):
         return []
