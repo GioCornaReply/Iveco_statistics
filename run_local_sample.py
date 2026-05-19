@@ -20,7 +20,12 @@ from engine_cleaning import (
     clean_spark_column_names,
     keep_latest_record_per_vin,
 )
-from engine_config import get_columns_for_sheet, get_default_sheet_ids, get_sheet_settings
+from engine_config import (
+    VARIABLE_DISPLAY_NAMES,
+    get_columns_for_sheet,
+    get_default_sheet_ids,
+    get_sheet_settings,
+)
 from engine_loader import extract_metadata, get_export_file_name, import_fat_tables_3
 from engine_stats import pyspark_variabili_x, report_pivot_pyspark_fixed
 from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
@@ -35,6 +40,46 @@ DEFAULT_CONFIG = {399}
 INVALID_EXCEL_SHEET_CHARS = str.maketrans({char: "-" for char in "[]:*?/\\"})
 DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
 DEFAULT_HADOOP_HOME = r"C:\hadoop"
+MISSION_ORDER = [
+    "<20 km/h HEAVY URBAN",
+    "20 - 40 km/h URBAN",
+    "40 - 50 km/h MIX URBAN/ MEDIUM HIGHWAY",
+    ">50 km/h HIGHWAY",
+]
+AVERAGE_VEHICLE_SPEED_RANGE_ORDER = [
+    "<10 km/h",
+    "10-20 km/h",
+    "20-30 km/h",
+    "30-40 km/h",
+    "40-50 km/h",
+    "50-60 km/h",
+    "60-70 km/h",
+    "70-80 km/h",
+    ">80 km/h",
+]
+AVERAGE_VEHICLE_SPEED_SPLIT_ORDER = ["<20 km/h", "20-40 km/h", ">40 km/h"]
+MILEAGE_RANGE_ORDER = [
+    "<10k km",
+    "10k-100k km",
+    "100k-200k km",
+    "200k-300k km",
+    "300k-400k km",
+    "400k-500k km",
+    "500k-600k km",
+    "600k-700k km",
+    "700k-800k km",
+    "800k-900k km",
+    "900k-1000k km",
+    ">1000k km",
+]
+MILEAGE_SPLIT_ORDER = ["<10k km", "over 10k km"]
+REPORT_SORT_ORDERS = {
+    "mission": MISSION_ORDER,
+    "Average_vehicle_speed_range": AVERAGE_VEHICLE_SPEED_RANGE_ORDER,
+    "Average_vehicle_speed_split": AVERAGE_VEHICLE_SPEED_SPLIT_ORDER,
+    "mileage_range": MILEAGE_RANGE_ORDER,
+    "mileage_split": MILEAGE_SPLIT_ORDER,
+}
 
 
 def configure_local_spark_environment():
@@ -238,13 +283,89 @@ def clean_excel_column_name(col_name):
     if lower_name.startswith("count_"):
         return "count"
 
+    display_name = get_display_name_for_metric(name)
+    if display_name:
+        return display_name
+
     name = re.sub(r"_+", " ", name).strip()
     return name
 
 
+def get_display_name_for_metric(col_name):
+    """Ritorna l'Item Name del dizionario a partire dal nome tecnico."""
+    metric_name = strip_metric_suffix(str(col_name))
+    return VARIABLE_DISPLAY_NAMES.get(metric_name.lower())
+
+
+def strip_metric_suffix(col_name):
+    """Rimuove i suffissi sheet aggiunti dalle colonne percentuali."""
+    candidate = col_name.strip().lower()
+    for sheet_id in sorted(get_default_sheet_ids(), key=len, reverse=True):
+        suffix = f"_{sheet_id.lower()}"
+        if candidate.endswith(suffix):
+            return candidate[: -len(suffix)]
+    return candidate
+
+
+def move_count_columns_to_end(df):
+    """Sposta tutte le colonne Count_* alla fine del report."""
+    count_cols = [col_name for col_name in df.columns if str(col_name).lower().startswith("count_")]
+    if not count_cols:
+        return df
+
+    all_count_cols = list(count_cols)
+    if len(count_cols) > 1:
+        counts_are_identical = df[count_cols].nunique(axis=1, dropna=False).le(1).all()
+        if counts_are_identical:
+            count_cols = [count_cols[0]]
+
+    other_cols = [col_name for col_name in df.columns if col_name not in all_count_cols]
+    return df[other_cols + count_cols]
+
+
+def sort_report_rows(df):
+    """Ordina le categorie note come mission, velocita' e mileage in modo naturale."""
+    sort_order_columns = [col_name for col_name in df.columns if col_name in REPORT_SORT_ORDERS]
+    if not sort_order_columns:
+        return df
+
+    df_sorted = df.copy()
+    for col_name in sort_order_columns:
+        df_sorted[col_name] = pd.Categorical(
+            df_sorted[col_name],
+            categories=REPORT_SORT_ORDERS[col_name],
+            ordered=True,
+        )
+
+    first_numeric_idx = next(
+        (
+            idx
+            for idx, col_name in enumerate(df_sorted.columns)
+            if pd.api.types.is_numeric_dtype(df_sorted[col_name])
+        ),
+        len(df_sorted.columns),
+    )
+    leading_group_cols = list(df_sorted.columns[:first_numeric_idx])
+    leading_sort_order_cols = [
+        col_name for col_name in leading_group_cols if col_name in REPORT_SORT_ORDERS
+    ]
+    if not leading_sort_order_cols:
+        return df
+
+    sort_cols = leading_group_cols or sort_order_columns
+
+    df_sorted = df_sorted.sort_values(sort_cols, kind="mergesort", na_position="last")
+
+    for col_name in sort_order_columns:
+        df_sorted[col_name] = df_sorted[col_name].astype(object)
+
+    return df_sorted.reset_index(drop=True)
+
+
 def prepare_excel_dataframe(df):
     """Normalizza i valori numerici prima dell'export Excel."""
-    df_export = df.copy()
+    df_export = sort_report_rows(df.copy())
+    df_export = move_count_columns_to_end(df_export)
 
     numeric_cols = df_export.select_dtypes(include=["number"]).columns
     if len(numeric_cols) > 0:

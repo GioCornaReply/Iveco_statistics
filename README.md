@@ -80,7 +80,8 @@ rileva Databricks tramite `dbutils` e crea widget modificabili:
 
 ```python
 input_mode  # default: "fat_table"
-config      # default notebook: "405"; accetta anche "399,400"
+config      # default notebook: "399"; accetta anche "405,406"
+keep_latest_per_vin  # default: "No"; "Yes" deduplica tenendo solo l'ultimo record per VIN
 output_dir  # default Databricks: "/tmp/iveco_statistics_output"
 ```
 
@@ -91,6 +92,11 @@ Da Databricks il notebook copia automaticamente il file anche in
 `dbfs:/FileStore/iveco_statistics_output/` e stampa il link di download.
 I file `.xlsx` sono ignorati da Git, quindi puoi scaricarli quando vuoi senza
 committare dati/output pesanti nella repo.
+
+Per config 399, se devi confrontare il numero righe con il notebook legacy,
+lascia `keep_latest_per_vin=No`: il sample locale 399 ha 6305 righe raw e 1381
+VIN unici. Con `keep_latest_per_vin=Yes` l'output scende a circa 1380 righe
+perche' viene mantenuto solo l'ultimo update per ogni VIN.
 
 Per le richieste MY24 V1.6.4 C9, eseguire due run separate dal widget `config`:
 
