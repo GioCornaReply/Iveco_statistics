@@ -21,7 +21,7 @@ from engine_cleaning import (
     keep_latest_record_per_vin,
 )
 from engine_config import get_columns_for_sheet, get_default_sheet_ids, get_sheet_settings
-from engine_loader import extract_metadata, import_fat_tables_3
+from engine_loader import extract_metadata, get_export_file_name, import_fat_tables_3
 from engine_stats import pyspark_variabili_x, report_pivot_pyspark_fixed
 from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
 
@@ -262,11 +262,11 @@ def prepare_excel_dataframe(df):
     return df_export
 
 
-def export_excel_outputs(sheet_outputs, output_dir):
+def export_excel_outputs(sheet_outputs, output_dir, file_name="local_sample_statistics.xlsx"):
     """Esporta pivot gia' generate in un file Excel."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    excel_path = output_path / "local_sample_statistics.xlsx"
+    excel_path = output_path / file_name
 
     exported = []
     used_sheet_names = set()
@@ -280,7 +280,8 @@ def export_excel_outputs(sheet_outputs, output_dir):
     try:
         writer = pd.ExcelWriter(excel_path, engine=excel_engine)
     except PermissionError:
-        excel_path = output_path / f"local_sample_statistics_{get_current_timestamp()}.xlsx"
+        suffix = excel_path.suffix or ".xlsx"
+        excel_path = output_path / f"{excel_path.stem}_{get_current_timestamp()}{suffix}"
         log_step(f"File Excel standard occupato, uso: {excel_path}")
         writer = pd.ExcelWriter(excel_path, engine=excel_engine)
 
@@ -306,10 +307,10 @@ def export_excel_outputs(sheet_outputs, output_dir):
     return excel_path
 
 
-def export_excel_report(df, validation, output_dir):
+def export_excel_report(df, validation, output_dir, file_name="local_sample_statistics.xlsx"):
     """Genera ed esporta le pivot in un file Excel sotto data/output."""
     sheet_outputs = build_sheet_outputs(df, validation)
-    return export_excel_outputs(sheet_outputs, output_dir)
+    return export_excel_outputs(sheet_outputs, output_dir, file_name)
 
 
 def run_local_sample(
@@ -354,7 +355,12 @@ def run_local_sample(
 
         excel_path = None
         if export_excel:
-            excel_path = export_excel_report(df_clean, validation, output_dir)
+            excel_file_name = (
+                get_export_file_name(p_group, config)
+                if input_mode == "fat_table"
+                else "local_sample_statistics.xlsx"
+            )
+            excel_path = export_excel_report(df_clean, validation, output_dir, excel_file_name)
 
         log_step("Run locale completato")
         return {

@@ -85,6 +85,8 @@ output_dir  # default: "Excel_statistics"
 ```
 
 Gli Excel generati vengono salvati nella cartella `Excel_statistics/`.
+In modalita' `fat_table` il nome include prodotto e config, per evitare
+sovrascritture tra run separate.
 I file `.xlsx` sono ignorati da Git, quindi puoi scaricarli quando vuoi senza
 committare dati/output pesanti nella repo.
 
