@@ -81,12 +81,14 @@ rileva Databricks tramite `dbutils` e crea widget modificabili:
 ```python
 input_mode  # default: "fat_table"
 config      # default notebook: "405"; accetta anche "399,400"
-output_dir  # default: "Excel_statistics"
+output_dir  # default Databricks: "/tmp/iveco_statistics_output"
 ```
 
 Gli Excel generati vengono salvati nella cartella `Excel_statistics/`.
 In modalita' `fat_table` il nome include prodotto e config, per evitare
 sovrascritture tra run separate.
+Da Databricks il notebook copia automaticamente il file anche in
+`dbfs:/FileStore/iveco_statistics_output/` e stampa il link di download.
 I file `.xlsx` sono ignorati da Git, quindi puoi scaricarli quando vuoi senza
 committare dati/output pesanti nella repo.
 
