@@ -124,7 +124,7 @@ def prepare_vodr_dataframe(
     sample_path=DEFAULT_VODR_SAMPLE_PATH,
     input_format=DEFAULT_VODR_SAMPLE_FORMAT,
     join_mission_test=True,
-    join_type="inner",
+    join_type="left",
     mt_config=None,
 ):
     """Importa VODR, applica cleaning legacy e opzionalmente il join MT."""
@@ -149,11 +149,11 @@ def prepare_vodr_dataframe(
 
         df_vodr = df_vodr.join(df_mt_join, on="vin", how=join_type)
 
-        if "udt_timestamp" in df_vodr.columns and "udt_timestamp_mt" in df_vodr.columns:
-            date_filter = F.col("_vodr_mt_day_diff").between(-1, 1)
-            if join_type == "left":
-                date_filter = date_filter | F.col("udt_timestamp_mt").isNull()
-
+        if (
+            join_type == "inner"
+            and "udt_timestamp" in df_vodr.columns
+            and "udt_timestamp_mt" in df_vodr.columns
+        ):
             df_vodr = (
                 df_vodr.withColumn(
                     "_vodr_mt_day_diff",
@@ -162,7 +162,7 @@ def prepare_vodr_dataframe(
                         F.to_date(F.col("udt_timestamp")),
                     ),
                 )
-                .filter(date_filter)
+                .filter(F.col("_vodr_mt_day_diff").between(-1, 1))
                 .drop("_vodr_mt_day_diff")
             )
 
@@ -301,7 +301,7 @@ def run_vodr_pipeline(
     output_dir=DEFAULT_VODR_OUTPUT_DIR,
     export_excel=True,
     join_mission_test=True,
-    join_type="inner",
+    join_type="left",
 ):
     log_step(f"Avvio pipeline VODR config={sorted(config)}")
     if export_excel:
