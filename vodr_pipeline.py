@@ -16,7 +16,7 @@ from engine_cleaning import (
 from engine_loader import extract_metadata, import_fat_tables_3
 from engine_stats import pyspark_variabili_x, report_pivot_pyspark_fixed
 from engine_utils import log_step, report_dim, report_vin
-from run_local_sample import export_excel_outputs, read_sample
+from run_local_sample import ensure_excel_writer_available, export_excel_outputs, read_sample
 from vodr_config import (
     VODR_EXCLUDED_VINS,
     config_mt_from_vodr,
@@ -300,6 +300,10 @@ def run_vodr_pipeline(
     join_type="inner",
 ):
     log_step(f"Avvio pipeline VODR config={sorted(config)}")
+    if export_excel:
+        excel_engine = ensure_excel_writer_available(auto_install=True)
+        log_step(f"Engine Excel disponibile: {excel_engine}")
+
     df_prepared = prepare_vodr_dataframe(
         spark=spark,
         config=config,

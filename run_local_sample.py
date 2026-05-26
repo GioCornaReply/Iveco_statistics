@@ -9,6 +9,7 @@ from decimal import Decimal
 import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 import pandas as pd
@@ -391,12 +392,7 @@ def export_excel_outputs(sheet_outputs, output_dir, file_name="local_sample_stat
 
     exported = []
     used_sheet_names = set()
-    try:
-        import xlsxwriter  # noqa: F401
-
-        excel_engine = "xlsxwriter"
-    except ImportError:
-        excel_engine = None
+    excel_engine = ensure_excel_writer_available()
 
     try:
         writer = pd.ExcelWriter(excel_path, engine=excel_engine)
@@ -426,6 +422,42 @@ def export_excel_outputs(sheet_outputs, output_dir, file_name="local_sample_stat
 
     log_step(f"Excel locale creato: {excel_path}")
     return excel_path
+
+
+def ensure_excel_writer_available(auto_install=False):
+    """Restituisce un engine Excel disponibile, installandolo se richiesto."""
+    try:
+        import xlsxwriter  # noqa: F401
+
+        return "xlsxwriter"
+    except ImportError:
+        pass
+
+    try:
+        import openpyxl  # noqa: F401
+
+        return "openpyxl"
+    except ImportError:
+        pass
+
+    if auto_install:
+        log_step("Engine Excel mancante: installo XlsxWriter e openpyxl")
+        subprocess.check_call(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "XlsxWriter>=3.2.0",
+                "openpyxl>=3.1.5",
+            ]
+        )
+        return ensure_excel_writer_available(auto_install=False)
+
+    raise ModuleNotFoundError(
+        "Nessun engine Excel disponibile. Installa XlsxWriter oppure openpyxl "
+        "prima di eseguire l'export Excel."
+    )
 
 
 def export_excel_report(df, validation, output_dir, file_name="local_sample_statistics.xlsx"):
