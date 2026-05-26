@@ -11,6 +11,14 @@ MISSION_TEST_STATISTICS_CONFIGS = {
     406,  # T-WAY MY24 V1.6.4 C9
 }
 
+VODR_STATISTICS_CONFIGS = {
+    33,
+    49,
+    50,
+    51,
+    52,
+}
+
 
 def normalize_product_group(product_group):
     """Normalizza il gruppo prodotto per mapping stabili anche con '-' o spazi."""
@@ -23,7 +31,7 @@ def get_table_path(val):
     """Restituisce il nome tabella Databricks in base alla config."""
     if val in {36, 76, 77}:
         return f"missiontest.fat_table_easy_{val}"
-    if val == 49:
+    if val in VODR_STATISTICS_CONFIGS:
         return f"u_truck_analyzer_p.vodr_statistics.fat_table_{val}"
     if val in MISSION_TEST_STATISTICS_CONFIGS:
         return f"u_truck_analyzer_p.mission_test_statistics.fat_table_{val}"
