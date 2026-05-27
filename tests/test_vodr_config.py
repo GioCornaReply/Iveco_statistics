@@ -10,7 +10,7 @@ from vodr_pipeline import parse_config_text
 
 
 def test_vodr_statistics_configs_use_unity_catalog_tables():
-    for config in (33, 49, 50, 51, 52):
+    for config in (33, 49, 50, 51, 52, 53):
         assert (
             get_table_path(config)
             == f"u_truck_analyzer_p.vodr_statistics.fat_table_{config}"
