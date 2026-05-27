@@ -12,6 +12,8 @@ from engine_cleaning import (
     add_legacy_preparation_features,
     clean_spark_column_names,
     keep_latest_record_per_vin,
+    official_column_names,
+    rename_official,
 )
 from engine_loader import extract_metadata, import_fat_tables_3
 from engine_stats import pyspark_variabili_x, report_pivot_pyspark_fixed
@@ -32,6 +34,24 @@ DEFAULT_VODR_INPUT_MODE = "fat_table"
 DEFAULT_VODR_OUTPUT_DIR = "/tmp/iveco_vodr_output"
 DEFAULT_VODR_SAMPLE_PATH = "data/sample/vodr"
 DEFAULT_VODR_SAMPLE_FORMAT = "parquet"
+
+VARIABLE_NAME_QUERIES = [
+    "SELECT item_name, variable_name, id_config FROM vodr.config_simple_item",
+    "SELECT item_name, variable_name, id_config FROM vodr.config_calculated_item",
+    (
+        "SELECT i.item_name, i.variable_name, o.id_config "
+        "FROM vodr.config_directive_order o "
+        "JOIN vodr.config_directive_items i ON i.id_directive_order = o.id"
+    ),
+    "SELECT item_name, variable_name, id_config FROM missiontest.config_simple_item",
+    "SELECT item_name, variable_name, id_config FROM missiontest.config_calculated_item",
+    "SELECT item_name, variable_name, id_config FROM missiontest.config_directive",
+    "SELECT item_name, variable_name, id_config FROM missiontest.config_directive_others",
+    "SELECT item_name, variable_name, id_config FROM missiontest.config_simple_item_easy",
+    "SELECT item_name, variable_name, id_config FROM missiontest.config_calculated_item_easy",
+    "SELECT item_name, variable_name, id_config FROM missiontest.config_directive_easy",
+    "SELECT item_name, variable_name, id_config FROM missiontest.config_directive_others_easy",
+]
 
 
 def parse_config_text(value):
@@ -54,6 +74,65 @@ def _find_column(df, candidates):
         if found:
             return found
     return None
+
+
+def load_variables_names(spark, config=None):
+    """Carica il dizionario variable_name -> item_name, se disponibile."""
+    try:
+        variables_names = spark.table("variables_names")
+        log_step("Dizionario colonne caricato da temp view/table variables_names")
+    except Exception:
+        variables_names = None
+
+    loaded_sources = []
+    for query in VARIABLE_NAME_QUERIES:
+        source_name = query.split(" FROM ", 1)[1].split(" ", 1)[0]
+        try:
+            partial = spark.sql(query).select("item_name", "variable_name", "id_config")
+            variables_names = partial if variables_names is None else variables_names.unionByName(partial)
+            loaded_sources.append(source_name)
+        except Exception:
+            log_step(f"Dizionario colonne non disponibile: {source_name}")
+
+    if variables_names is None:
+        log_step("Dizionario colonne non caricato: export con nomi tecnici/fallback")
+        return None
+
+    variables_names = variables_names.dropna(subset=["item_name", "variable_name"]).dropDuplicates()
+    if config is not None:
+        variables_names_config = variables_names.where(F.col("id_config").isin([int(value) for value in config]))
+        log_step(
+            "Dizionario colonne caricato: "
+            f"{variables_names.count()} righe totali, "
+            f"{variables_names_config.count()} per config {sorted(config)}"
+        )
+        return variables_names_config
+
+    log_step(f"Dizionario colonne caricato: {variables_names.count()} righe da {loaded_sources}")
+    return variables_names
+
+
+def rename_pandas_official(df_pd, variables_names_df, config):
+    """Rinomina un DataFrame pandas usando lo stesso dizionario del legacy."""
+    if variables_names_df is None:
+        return df_pd
+
+    renamed = df_pd.copy()
+    metric_prefixes = ("StdDev_", "Advice_", "Alert_", "Count_")
+    columns = list(renamed.columns)
+    plain_positions = [
+        idx
+        for idx, col_name in enumerate(columns)
+        if not str(col_name).startswith(metric_prefixes)
+    ]
+    plain_names = [columns[idx] for idx in plain_positions]
+    official_names = official_column_names(plain_names, variables_names_df, config)
+
+    for idx, official_name in zip(plain_positions, official_names):
+        columns[idx] = official_name
+
+    renamed.columns = columns
+    return renamed
 
 
 def import_mission_test_statistics(spark, config):
@@ -219,14 +298,15 @@ def add_vodr_time_percentages(df, config):
     return df
 
 
-def build_vodr_sheet_output(df, sheet):
+def build_vodr_sheet_output(df, sheet, variables_names_df=None, config=None):
     """Costruisce un singolo sheet VODR come DataFrame Pandas."""
     if sheet.get("kind") == "dataset":
         log_step("Sheet VODR Complete Dataset: export diretto")
+        df_export = rename_official(df, variables_names_df, config) if variables_names_df is not None else df
         return {
             "sheet_id": sheet["sheet_id"],
             "sheet_name": sheet["name"],
-            "dataframe": df.toPandas(),
+            "dataframe": df_export.toPandas(),
             "validation": {},
         }
 
@@ -271,6 +351,8 @@ def build_vodr_sheet_output(df, sheet):
         log_step(f"Sheet VODR {sheet['sheet_id']}: pivot vuota, salto")
         return None
 
+    df_pivot = rename_pandas_official(df_pivot, variables_names_df, config)
+
     return {
         "sheet_id": sheet["sheet_id"],
         "sheet_name": sheet["name"],
@@ -283,10 +365,10 @@ def build_vodr_sheet_output(df, sheet):
     }
 
 
-def build_vodr_sheet_outputs(df, config):
+def build_vodr_sheet_outputs(df, config, variables_names_df=None):
     outputs = []
     for sheet in get_vodr_report_sheets(config):
-        output = build_vodr_sheet_output(df, sheet)
+        output = build_vodr_sheet_output(df, sheet, variables_names_df, config)
         if output is not None:
             outputs.append(output)
     return outputs
@@ -318,7 +400,8 @@ def run_vodr_pipeline(
         join_type=join_type,
     )
     df_time_percentage = add_vodr_time_percentages(df_prepared, config)
-    sheet_outputs = build_vodr_sheet_outputs(df_time_percentage, config)
+    variables_names = load_variables_names(spark, config)
+    sheet_outputs = build_vodr_sheet_outputs(df_time_percentage, config, variables_names)
 
     excel_path = None
     if export_excel:

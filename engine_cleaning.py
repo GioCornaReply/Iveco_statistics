@@ -175,19 +175,86 @@ def engine_model_standard(df: DataFrame) -> DataFrame:
 
 # --- RIDENOMINAZIONE UFFICIALE ---
 
+def _build_variables_mapping(variables_names_df: DataFrame, config_list: set) -> dict:
+    """Crea mapping case-insensitive variable_name -> item_name."""
+    if variables_names_df is None:
+        return {}
+
+    columns_by_lower = {col_name.lower(): col_name for col_name in variables_names_df.columns}
+    variable_col = columns_by_lower.get("variable_name") or columns_by_lower.get("my_variable_name")
+    item_col = columns_by_lower.get("item_name")
+    config_col = columns_by_lower.get("id_config")
+
+    if variable_col is None or item_col is None:
+        return {}
+
+    df_mapping = variables_names_df
+    if config_col is not None and config_list:
+        df_mapping = df_mapping.where(F.col(config_col).isin([int(value) for value in config_list]))
+
+    mapping = {}
+    for row in df_mapping.select(item_col, variable_col).dropna().dropDuplicates().collect():
+        old_name = row[variable_col]
+        new_name = row[item_col]
+        if old_name and new_name:
+            mapping[str(old_name).lower()] = str(new_name)
+
+    return mapping
+
+
+def _column_candidates(col_name: str) -> list:
+    """Possibili chiavi legacy per una colonna tecnica o percentuale."""
+    candidates = [col_name]
+
+    if col_name.endswith("_x"):
+        candidates.append(col_name[:-2])
+
+    parts = col_name.rsplit("_", 1)
+    if len(parts) == 2 and parts[1].lower()[:1].isdigit():
+        candidates.append(parts[0])
+
+    return candidates
+
+
+def _fallback_display_name(col_name: str) -> str:
+    return col_name.replace("_x", "").replace("_", " ").title()
+
+
+def _make_unique_column_names(column_names: list) -> list:
+    used = {}
+    result = []
+    for col_name in column_names:
+        if col_name not in used:
+            used[col_name] = 0
+            result.append(col_name)
+            continue
+
+        used[col_name] += 1
+        suffix = used[col_name]
+        result.append(f"{col_name} ({suffix})")
+    return result
+
+
+def official_column_names(columns: list, variables_names_df: DataFrame, config_list: set) -> list:
+    """Restituisce nomi ufficiali mantenendo l'ordine delle colonne."""
+    mapping = _build_variables_mapping(variables_names_df, config_list)
+    renamed = []
+
+    for col_name in columns:
+        official_name = None
+        for candidate in _column_candidates(str(col_name)):
+            official_name = mapping.get(candidate.lower())
+            if official_name:
+                break
+
+        renamed.append(official_name or _fallback_display_name(str(col_name)))
+
+    return _make_unique_column_names(renamed)
+
+
 def rename_official(df: DataFrame, variables_names_df: DataFrame, config_list: set) -> DataFrame:
-    """
-    Mappa i nomi tecnici delle colonne sui nomi leggibili definiti nel mapping.
-    """
-    # Trasforma il mapping in un dizionario per una sostituzione veloce
-    mapping = {row['item_name']: row['my_variable_name'] 
-               for row in variables_names_df.collect() 
-               if row['id_config'] in config_list}
-    
-    for old_name, new_name in mapping.items():
-        if old_name in df.columns:
-            df = df.withColumnRenamed(old_name, new_name)
-    return df
+    """Mappa i nomi tecnici delle colonne sui nomi ufficiali item_name."""
+    return df.toDF(*official_column_names(df.columns, variables_names_df, config_list))
 
 # --- LOGICA TRIGGER ---
 
