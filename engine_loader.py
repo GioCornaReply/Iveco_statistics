@@ -18,6 +18,7 @@ VODR_STATISTICS_CONFIGS = {
     51,
     52,
     53,
+    54,
 }
 
 
