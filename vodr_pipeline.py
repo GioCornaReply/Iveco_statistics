@@ -34,6 +34,8 @@ DEFAULT_VODR_INPUT_MODE = "fat_table"
 DEFAULT_VODR_OUTPUT_DIR = "/tmp/iveco_vodr_output"
 DEFAULT_VODR_SAMPLE_PATH = "data/sample/vodr"
 DEFAULT_VODR_SAMPLE_FORMAT = "parquet"
+EXCEL_MAX_ROWS = 1_048_576
+MAX_DIRECT_DATASET_EXCEL_CELLS = 5_000_000
 
 VARIABLE_NAME_QUERIES = [
     "SELECT item_name, variable_name, id_config FROM vodr.config_simple_item",
@@ -302,6 +304,22 @@ def build_vodr_sheet_output(df, sheet, variables_names_df=None, config=None):
     """Costruisce un singolo sheet VODR come DataFrame Pandas."""
     if sheet.get("kind") == "dataset":
         log_step("Sheet VODR Complete Dataset: export diretto")
+        row_count = df.limit(EXCEL_MAX_ROWS + 1).count()
+        if row_count > EXCEL_MAX_ROWS:
+            log_step(
+                "Sheet VODR Complete Dataset saltato: "
+                f"oltre il limite Excel di {EXCEL_MAX_ROWS} righe"
+            )
+            return None
+        cell_count = row_count * len(df.columns)
+        if cell_count > MAX_DIRECT_DATASET_EXCEL_CELLS:
+            log_step(
+                "Sheet VODR Complete Dataset saltato: "
+                f"{row_count} righe x {len(df.columns)} colonne = {cell_count} celle, "
+                "troppo grande per conversione pandas/Excel sul driver"
+            )
+            return None
+
         df_export = rename_official(df, variables_names_df, config) if variables_names_df is not None else df
         return {
             "sheet_id": sheet["sheet_id"],
@@ -346,6 +364,10 @@ def build_vodr_sheet_output(df, sheet, variables_names_df=None, config=None):
         log_step(f"Sheet VODR {sheet['sheet_id']}: nessuna colonna presente, salto")
         return None
 
+    log_step(
+        f"Sheet VODR {sheet['sheet_id']}: calcolo pivot "
+        f"({len(pivot_columns)} colonne, group_by={group_by})"
+    )
     df_pivot = report_pivot_pyspark_fixed(df, pivot_columns, group_by, pivot_triggers)
     if df_pivot is None or df_pivot.empty:
         log_step(f"Sheet VODR {sheet['sheet_id']}: pivot vuota, salto")

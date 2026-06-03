@@ -94,39 +94,71 @@ def report_pivot_pyspark_fixed(
         print(f"Mismatch lista/triggers: {len(lista)} vs {len(valutazione_triggers)}")
         return None
 
-    df_uno = None
+    valid_pairs = []
     for col_name, trigger in zip(lista, valutazione_triggers):
         if col_name not in df3.columns:
             print(f"Colonna non presente, salto: {col_name}")
             continue
 
-        try:
-            df_col = new_soglie_pyspark(df3, col_name, variabili, trigger)
-            if df_col is None:
-                print(f"{col_name}: risultato vuoto, salto")
-                continue
+        valid_pairs.append((col_name, trigger))
 
-            if df_uno is None:
-                df_uno = df_col
-                continue
-
-            duplicate_cols = set(df_uno.columns).intersection(df_col.columns) - set(variabili)
-            if duplicate_cols:
-                df_col = df_col.drop(*duplicate_cols)
-
-            if not all(col_name in df_col.columns for col_name in variabili):
-                print(f"{col_name}: colonne join mancanti, salto")
-                continue
-
-            df_uno = df_uno.join(df_col, on=variabili, how="outer")
-        except Exception as e:
-            print(f"Errore su {col_name}: {e}")
-            continue
-
-    if df_uno is None:
+    if not valid_pairs:
         return None
 
-    return prep_toPandas(df_uno)
+    group_filter = None
+    for group_col in variabili:
+        condition = F.col(f"`{group_col}`").isNotNull()
+        group_filter = condition if group_filter is None else group_filter & condition
+
+    df_base = df3
+    if group_filter is not None:
+        df_base = df_base.filter(group_filter)
+
+    agg_exprs = []
+    for col_name, _ in valid_pairs:
+        safe_col = F.col(f"`{col_name}`")
+        agg_exprs.extend(
+            [
+                F.round(F.avg(safe_col), 2).alias(col_name),
+                F.coalesce(F.round(F.stddev(safe_col), 2), F.lit(0.0)).alias(f"StdDev_{col_name}"),
+                F.count(safe_col).alias(f"Count_{col_name}"),
+            ]
+        )
+
+    df_uno = df_base.groupBy(*variabili).agg(*agg_exprs)
+
+    for col_name, trigger in valid_pairs:
+        avg_col = F.col(f"`{col_name}`")
+        std_col = F.col(f"`StdDev_{col_name}`")
+        advice_name = f"Advice_{col_name}"
+        alert_name = f"Alert_{col_name}"
+
+        if trigger == 1:
+            df_uno = df_uno.withColumn(advice_name, F.round(avg_col + std_col / 2, 2))
+            df_uno = df_uno.withColumn(alert_name, F.round(avg_col + std_col, 2))
+        else:
+            df_uno = df_uno.withColumn(
+                advice_name,
+                F.when(avg_col > std_col / 2, F.round(avg_col - std_col / 2, 2)).otherwise(0),
+            )
+            df_uno = df_uno.withColumn(
+                alert_name,
+                F.when(avg_col > std_col, F.round(avg_col - std_col, 2)).otherwise(0),
+            )
+
+    ordered_columns = list(variabili)
+    for col_name, _ in valid_pairs:
+        ordered_columns.extend(
+            [
+                col_name,
+                f"StdDev_{col_name}",
+                f"Advice_{col_name}",
+                f"Alert_{col_name}",
+                f"Count_{col_name}",
+            ]
+        )
+
+    return prep_toPandas(df_uno.select(*ordered_columns))
 
 
 def report_pivot_pyspark(df3: DataFrame, lista: list, variabili: list, valutazione_triggers: list):
