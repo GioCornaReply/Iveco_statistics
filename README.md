@@ -80,7 +80,7 @@ rileva Databricks tramite `dbutils` e crea widget modificabili:
 
 ```python
 input_mode  # default: "fat_table"
-config      # default notebook: "399"; accetta anche "405,406"
+config      # default notebook: "399"; accetta anche "405,406,408"
 keep_latest_per_vin  # default: "No"; "Yes" deduplica tenendo solo l'ultimo record per VIN
 output_dir  # default Databricks: "/tmp/iveco_statistics_output"
 ```
@@ -98,11 +98,12 @@ lascia `keep_latest_per_vin=No`: il sample locale 399 ha 6305 righe raw e 1381
 VIN unici. Con `keep_latest_per_vin=Yes` l'output scende a circa 1380 righe
 perche' viene mantenuto solo l'ultimo update per ogni VIN.
 
-Per le richieste MY24 V1.6.4 C9, eseguire due run separate dal widget `config`:
+Per le richieste MY24 V1.6.4 C9, eseguire run separate dal widget `config`:
 
 ```text
 405  # X-WAY MY24 AT/AD V1.6.4 C9
 406  # T-WAY MY24 V1.6.4 C9
+408  # Mission Test MY24 su Unity Catalog
 ```
 
 Per testare da notebook/driver Databricks con pochi sheet:

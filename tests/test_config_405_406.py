@@ -9,14 +9,11 @@ import pandas as pd
 
 class Config405406Test(unittest.TestCase):
     def test_new_configs_use_unity_catalog_mission_test_tables(self):
-        self.assertEqual(
-            get_table_path(405),
-            "u_truck_analyzer_p.mission_test_statistics.fat_table_405",
-        )
-        self.assertEqual(
-            get_table_path(406),
-            "u_truck_analyzer_p.mission_test_statistics.fat_table_406",
-        )
+        for config in (405, 406, 408):
+            self.assertEqual(
+                get_table_path(config),
+                f"u_truck_analyzer_p.mission_test_statistics.fat_table_{config}",
+            )
 
     def test_my24_series_variants_use_new_layout_columns(self):
         self.assertTrue(is_new_layout_series("X-WAY MY24 AT/AD_V1.6.4 C9"))
@@ -42,6 +39,10 @@ class Config405406Test(unittest.TestCase):
         self.assertEqual(
             get_export_file_name("IVECO_T-WAY", {406}),
             "Statistics_HEAVY_TWAY_406_dataset.xlsx",
+        )
+        self.assertEqual(
+            get_export_file_name("IVECO_X-WAY", {408}),
+            "Statistics_HEAVY_XWAY_408_dataset.xlsx",
         )
 
     def test_config_399_uses_specific_oil_pressure_variables(self):
