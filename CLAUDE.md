@@ -51,6 +51,7 @@
 - Non ignorare i vincoli Excel: nomi sheet, limite righe e ordinamento categorie sono gestiti nel runner.
 - Su cluster Databricks possono mancare `XlsxWriter`/`openpyxl`: il notebook modulare abilita `auto_install_excel_engine=True` nell'export.
 - Per copiare su DBFS usare sempre il `excel_path` restituito dall'export; non hardcodare `local_sample_statistics.xlsx` in modalita' `fat_table`.
+- Evitare import obbligatori di helper appena aggiunti nella prima cella notebook: usare lazy import/fallback se Databricks puo' avere moduli cacheati.
 - Non lavorare direttamente su branch principale se la modifica e' ampia; creare un branch dedicato.
 - Prima di cambiare mapping legacy, verificare i test e, se possibile, confrontare con `Old_statistics/`.
 

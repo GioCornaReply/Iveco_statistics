@@ -12,6 +12,26 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ### 2026-06-09 - Codex - branch `main`
 
+- **Obiettivo**: evitare ImportError alla prima cella del notebook se Databricks ha `run_local_sample.py` vecchio/cacheato.
+- **Contesto letto**: stato Git e `Main_pipeline_modular.ipynb`.
+- **Azioni fatte**:
+  - Rimosso `copy_excel_to_dbfs` dagli import obbligatori della prima cella.
+  - Spostata la risoluzione del copy DBFS nella cella di export con lazy import.
+  - Aggiunto fallback locale nella cella di export se `run_local_sample.copy_excel_to_dbfs` non e' ancora disponibile.
+  - Aggiornato `CLAUDE.md` con pitfall sugli helper nuovi nei notebook Databricks.
+- **Decisioni**:
+  - La prima cella deve importare solo funzioni stabili gia' presenti nel modulo Databricks.
+  - Gli helper nuovi usati solo a fine notebook vanno importati dove servono, con fallback se possibile.
+- **Test/verifiche**:
+  - `python -m pytest tests/`: 12 passed.
+  - Verificato che `copy_excel_to_dbfs` non sia piu' importato nella prima cella del notebook.
+  - Nota: resta il warning non bloccante di `langsmith`/Pydantic V1 con Python 3.14.
+- **Prossimi passi**:
+  - Sincronizzare Databricks con il commit della fix.
+  - Dopo sync, la prima cella non deve piu' fallire anche se il modulo Python e' ancora cacheato.
+
+### 2026-06-09 - Codex - branch `main`
+
 - **Obiettivo**: rendere robusta la copia Excel su DBFS usando il nome file reale generato.
 - **Contesto letto**: stato Git, `run_local_sample.py`, `Main_pipeline_modular.ipynb`, `CLAUDE.md`, `handoff.md`.
 - **Azioni fatte**:
