@@ -429,6 +429,54 @@ def export_excel_outputs(
     return excel_path
 
 
+def copy_excel_to_dbfs(
+    excel_path,
+    dbutils,
+    spark=None,
+    dbfs_output_dir="dbfs:/FileStore/iveco_statistics_output",
+):
+    """Copia su DBFS il file Excel effettivamente generato dal notebook."""
+    if excel_path is None:
+        raise FileNotFoundError(
+            "Nessun Excel generato: export_excel_outputs ha restituito None. "
+            "Controlla che almeno uno sheet sia stato prodotto."
+        )
+
+    local_path = Path(excel_path)
+    if not local_path.exists():
+        raise FileNotFoundError(
+            f"Excel non trovato: {local_path}. "
+            "Non usare nomi hardcoded: copia il path restituito da export_excel_outputs."
+        )
+
+    local_excel_path = local_path.resolve()
+    dbfs_output_dir = dbfs_output_dir.rstrip("/")
+    dbfs_excel_path = f"{dbfs_output_dir}/{local_excel_path.name}"
+
+    dbutils.fs.mkdirs(dbfs_output_dir)
+    dbutils.fs.cp(f"file:{local_excel_path.as_posix()}", dbfs_excel_path, True)
+    log_step(f"Excel copiato su DBFS: {dbfs_excel_path}")
+
+    download_url = None
+    if spark is not None:
+        try:
+            workspace_url = spark.conf.get("spark.databricks.workspaceUrl", None)
+        except Exception:
+            workspace_url = None
+        if workspace_url:
+            download_url = (
+                f"https://{workspace_url}/files/iveco_statistics_output/"
+                f"{local_excel_path.name}"
+            )
+            print(f"Download: {download_url}")
+
+    return {
+        "local_path": str(local_excel_path),
+        "dbfs_path": dbfs_excel_path,
+        "download_url": download_url,
+    }
+
+
 def ensure_excel_writer_available(auto_install=False):
     """Restituisce un engine Excel disponibile, installandolo se richiesto."""
     try:

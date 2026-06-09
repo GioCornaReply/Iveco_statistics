@@ -12,6 +12,25 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ### 2026-06-09 - Codex - branch `main`
 
+- **Obiettivo**: rendere robusta la copia Excel su DBFS usando il nome file reale generato.
+- **Contesto letto**: stato Git, `run_local_sample.py`, `Main_pipeline_modular.ipynb`, `CLAUDE.md`, `handoff.md`.
+- **Azioni fatte**:
+  - Aggiunta `copy_excel_to_dbfs()` in `run_local_sample.py`.
+  - Aggiornato `Main_pipeline_modular.ipynb` per usare `copy_excel_to_dbfs(excel_path, dbutils, spark=spark)`.
+  - Aggiunti test unitari per copia DBFS e file mancante.
+  - Aggiornato `CLAUDE.md` con pitfall: non hardcodare `local_sample_statistics.xlsx` in `fat_table`.
+- **Decisioni**:
+  - La sorgente della copia DBFS e' sempre il `Path` restituito da `export_excel_outputs()`.
+  - Il notebook non ricostruisce piu' manualmente nome file e download URL.
+- **Test/verifiche**:
+  - `python -m pytest tests/`: 12 passed.
+  - Nota: resta il warning non bloccante di `langsmith`/Pydantic V1 con Python 3.14.
+- **Prossimi passi**:
+  - Sincronizzare Databricks con il commit della fix.
+  - Rilanciare la cella `Export Excel`; non serve usare la cella manuale con `local_sample_statistics.xlsx`.
+
+### 2026-06-09 - Codex - branch `main`
+
 - **Obiettivo**: sbloccare export Excel su Databricks quando mancano `XlsxWriter`/`openpyxl`.
 - **Contesto letto**: `CLAUDE.md`, `handoff.md`, stato Git, `run_local_sample.py`, `Main_pipeline_modular.ipynb`.
 - **Azioni fatte**:
