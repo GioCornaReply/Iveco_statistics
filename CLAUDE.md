@@ -49,6 +49,7 @@
 - Non deduplicare per VIN quando il confronto legacy richiede righe raw; per config 399 il README segnala differenze attese tra raw e latest VIN.
 - Non rinominare colonne ufficiali con stringhe ad hoc: usare dizionari/mapping esistenti.
 - Non ignorare i vincoli Excel: nomi sheet, limite righe e ordinamento categorie sono gestiti nel runner.
+- Su cluster Databricks possono mancare `XlsxWriter`/`openpyxl`: il notebook modulare abilita `auto_install_excel_engine=True` nell'export.
 - Non lavorare direttamente su branch principale se la modifica e' ampia; creare un branch dedicato.
 - Prima di cambiare mapping legacy, verificare i test e, se possibile, confrontare con `Old_statistics/`.
 

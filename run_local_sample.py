@@ -384,7 +384,12 @@ def prepare_excel_dataframe(df):
     return df_export
 
 
-def export_excel_outputs(sheet_outputs, output_dir, file_name="local_sample_statistics.xlsx"):
+def export_excel_outputs(
+    sheet_outputs,
+    output_dir,
+    file_name="local_sample_statistics.xlsx",
+    auto_install_excel_engine=False,
+):
     """Esporta pivot gia' generate in un file Excel."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -392,7 +397,7 @@ def export_excel_outputs(sheet_outputs, output_dir, file_name="local_sample_stat
 
     exported = []
     used_sheet_names = set()
-    excel_engine = ensure_excel_writer_available()
+    excel_engine = ensure_excel_writer_available(auto_install=auto_install_excel_engine)
 
     try:
         writer = pd.ExcelWriter(excel_path, engine=excel_engine)
@@ -460,10 +465,21 @@ def ensure_excel_writer_available(auto_install=False):
     )
 
 
-def export_excel_report(df, validation, output_dir, file_name="local_sample_statistics.xlsx"):
+def export_excel_report(
+    df,
+    validation,
+    output_dir,
+    file_name="local_sample_statistics.xlsx",
+    auto_install_excel_engine=False,
+):
     """Genera ed esporta le pivot in un file Excel sotto data/output."""
     sheet_outputs = build_sheet_outputs(df, validation)
-    return export_excel_outputs(sheet_outputs, output_dir, file_name)
+    return export_excel_outputs(
+        sheet_outputs,
+        output_dir,
+        file_name,
+        auto_install_excel_engine=auto_install_excel_engine,
+    )
 
 
 def run_local_sample(

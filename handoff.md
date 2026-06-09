@@ -10,6 +10,25 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-06-09 - Codex - branch `main`
+
+- **Obiettivo**: sbloccare export Excel su Databricks quando mancano `XlsxWriter`/`openpyxl`.
+- **Contesto letto**: `CLAUDE.md`, `handoff.md`, stato Git, `run_local_sample.py`, `Main_pipeline_modular.ipynb`.
+- **Azioni fatte**:
+  - Estesa `export_excel_outputs()` con parametro `auto_install_excel_engine`.
+  - Estesa `export_excel_report()` con lo stesso parametro per compatibilita' futura.
+  - Aggiornato `Main_pipeline_modular.ipynb` per chiamare l'export con `auto_install_excel_engine=True`.
+  - Aggiornato `CLAUDE.md` con il pitfall Databricks sugli engine Excel.
+- **Decisioni**:
+  - Lasciare default `False` nelle funzioni Python per non installare pacchetti in modo implicito da runner locali o chiamate programmatiche.
+  - Abilitare auto-install solo nel notebook Databricks, dove l'errore e' emerso.
+- **Test/verifiche**:
+  - `python -m pytest tests/`: 10 passed.
+  - Nota: resta il warning non bloccante di `langsmith`/Pydantic V1 con Python 3.14.
+- **Prossimi passi**:
+  - Sincronizzare Databricks con il commit della fix.
+  - Dopo sync/restart, rilanciare la cella di export Excel.
+
 ### 2026-06-08 - Codex - branch `main`
 
 - **Obiettivo**: abilitare la config Mission Test `408` per il notebook modulare.
