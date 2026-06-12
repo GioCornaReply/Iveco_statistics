@@ -10,6 +10,27 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-06-12 - Codex - branch `main`
+
+- **Obiettivo**: creare notebook one-shot per richiesta cliente su VIN con secondi > 600 C.
+- **Contesto letto**: `CLAUDE.md`, `handoff.md`, stato Git, `Task_temp_600/MT_DAILY_PREP.ipynb`.
+- **Input cliente**:
+  - VIN `ZCFCE35B505652215`.
+  - Segnalazione: 381 sec > 600 C non emersi dalla ricerca.
+- **Azioni fatte**:
+  - Identificate nel notebook originale le celle 11-14 come tentativo di analisi su `Temperatureupstr_doc_600`.
+  - Creato `Task_temp_600/Extract_DOC_600_VIN_check.ipynb`.
+  - Il nuovo notebook legge la fat table raw per config `382`, risolve case-insensitive `Temperatureupstr_DOC_600`, controlla il VIN cliente, estrae tutti i VIN con secondi > 600 C e confronta raw/all updates vs latest per VIN.
+  - Previsto export CSV opzionale su `dbfs:/FileStore/iveco_statistics_output/task_temp_600`.
+- **Decisioni**:
+  - Task tenuto separato in `Task_temp_600/` perche' one-shot e non parte della pipeline principale.
+  - Analisi basata sui raw/all updates prima del latest per evitare di perdere VIN con eventi presenti solo in aggiornamenti precedenti.
+- **Test/verifiche**:
+  - Validato JSON notebook con Node: 20 celle leggibili.
+- **Prossimi passi**:
+  - Eseguire `Task_temp_600/Extract_DOC_600_VIN_check.ipynb` su Databricks.
+  - Se il VIN compare nei raw ma non nel latest, spiegare al cliente che il filtro latest per VIN nasconde quell'evento.
+
 ### 2026-06-09 - Codex - branch `main`
 
 - **Obiettivo**: evitare ImportError alla prima cella del notebook se Databricks ha `run_local_sample.py` vecchio/cacheato.
