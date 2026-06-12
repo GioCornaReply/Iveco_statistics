@@ -36,12 +36,13 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 - **Obiettivo**: sistemare apertura/esecuzione del notebook DOC 600 su Jupyter/Databricks.
 - **Azioni fatte**:
   - Normalizzato `Task_temp_600/Extract_DOC_600_VIN_check.ipynb` con `nbformat`, includendo `id` celle.
-  - Aggiunta versione fallback Databricks source `Task_temp_600/Extract_DOC_600_VIN_check.py`.
+  - Aggiunta versione fallback Databricks source `Task_temp_600/Extract_DOC_600_VIN_check_source.py`.
+  - Rinominata la versione `.py` con basename diverso dall'`.ipynb` per evitare conflitti nei Repos Databricks.
 - **Test/verifiche**:
   - `nbformat.validate`: ok, 20 celle, tutte con `id`.
   - Verificata anteprima del `.py` con separatori `# COMMAND ----------`.
 - **Prossimi passi**:
-  - Su Databricks usare il `.ipynb`; se il viewer fa ancora problemi, aprire/importare il `.py`.
+  - Su Databricks usare il `.ipynb`; se il viewer fa ancora problemi, aprire/importare `Extract_DOC_600_VIN_check_source.py`.
 
 ### 2026-06-09 - Codex - branch `main`
 
