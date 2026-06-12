@@ -31,6 +31,18 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
   - Eseguire `Task_temp_600/Extract_DOC_600_VIN_check.ipynb` su Databricks.
   - Se il VIN compare nei raw ma non nel latest, spiegare al cliente che il filtro latest per VIN nasconde quell'evento.
 
+### 2026-06-12 - Codex - branch `main`
+
+- **Obiettivo**: sistemare apertura/esecuzione del notebook DOC 600 su Jupyter/Databricks.
+- **Azioni fatte**:
+  - Normalizzato `Task_temp_600/Extract_DOC_600_VIN_check.ipynb` con `nbformat`, includendo `id` celle.
+  - Aggiunta versione fallback Databricks source `Task_temp_600/Extract_DOC_600_VIN_check.py`.
+- **Test/verifiche**:
+  - `nbformat.validate`: ok, 20 celle, tutte con `id`.
+  - Verificata anteprima del `.py` con separatori `# COMMAND ----------`.
+- **Prossimi passi**:
+  - Su Databricks usare il `.ipynb`; se il viewer fa ancora problemi, aprire/importare il `.py`.
+
 ### 2026-06-09 - Codex - branch `main`
 
 - **Obiettivo**: evitare ImportError alla prima cella del notebook se Databricks ha `run_local_sample.py` vecchio/cacheato.
