@@ -20,3 +20,6 @@ Old_statistics/Vodr/
 Old_statistics/*TIME_PERCENTAGE*.py
 Old_statistics/Utils (2).py
 Old_statistics/__pycache__/
+
+# One-shot task local source notebook kept as reference only.
+Task_temp_600/MT_DAILY_PREP.ipynb
