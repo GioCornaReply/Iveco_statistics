@@ -19,7 +19,7 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
   - Segnalazione: 381 sec > 600 C non emersi dalla ricerca.
 - **Azioni fatte**:
   - Identificate nel notebook originale le celle 11-14 come tentativo di analisi su `Temperatureupstr_doc_600`.
-  - Creato `Task_temp_600/Extract_DOC_600_VIN_check.py` come Databricks source notebook.
+  - Creato `Task_temp_600/DOC600_VIN_Extraction.py` come Databricks source notebook.
   - Il nuovo notebook legge la fat table raw per config `382`, risolve case-insensitive `Temperatureupstr_DOC_600`, controlla il VIN cliente, estrae tutti i VIN con secondi > 600 C e confronta raw/all updates vs latest per VIN.
   - Previsto export CSV opzionale su `dbfs:/FileStore/iveco_statistics_output/task_temp_600`.
 - **Decisioni**:
@@ -28,7 +28,7 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 - **Test/verifiche**:
   - Validato source Databricks `.py` con separatori `# COMMAND ----------`.
 - **Prossimi passi**:
-  - Eseguire `Task_temp_600/Extract_DOC_600_VIN_check.py` su Databricks.
+  - Eseguire `Task_temp_600/DOC600_VIN_Extraction.py` su Databricks.
   - Se il VIN compare nei raw ma non nel latest, spiegare al cliente che il filtro latest per VIN nasconde quell'evento.
 
 ### 2026-06-12 - Codex - branch `main`
@@ -36,12 +36,13 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 - **Obiettivo**: sistemare apertura/esecuzione del notebook DOC 600 su Databricks.
 - **Azioni fatte**:
   - Rimosso dal repo `Task_temp_600/Extract_DOC_600_VIN_check.ipynb`, perche' Databricks Repos non lo caricava correttamente.
-  - Promosso il Databricks source notebook a `Task_temp_600/Extract_DOC_600_VIN_check.py`.
+  - Promosso il Databricks source notebook a `Task_temp_600/DOC600_VIN_Extraction.py`.
+  - Rinominato il source notebook con basename diverso da `Extract_DOC_600_VIN_check`, per evitare conflitti con IPYNB rimasti nel workspace Databricks da pull precedenti.
   - Aggiunto `Task_temp_600/MT_DAILY_PREP.ipynb` a `.gitignore` per evitare commit accidentali del notebook sorgente pesante.
 - **Test/verifiche**:
   - Verificata anteprima del `.py` con header `# Databricks notebook source` e separatori `# COMMAND ----------`.
 - **Prossimi passi**:
-  - Su Databricks usare solo `Extract_DOC_600_VIN_check.py`, che Repos mostra come notebook nativo.
+  - Su Databricks usare solo `DOC600_VIN_Extraction.py`, che Repos mostra come notebook nativo.
 
 ### 2026-06-09 - Codex - branch `main`
 
