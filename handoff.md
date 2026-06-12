@@ -44,6 +44,20 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 - **Prossimi passi**:
   - Su Databricks usare solo `DOC600_VIN_Extraction.py`, che Repos mostra come notebook nativo.
 
+### 2026-06-12 - Codex - branch `main`
+
+- **Obiettivo**: correggere export download del task DOC 600.
+- **Azioni fatte**:
+  - Modificato `Task_temp_600/DOC600_VIN_Extraction.py` per esportare CSV singoli nominati in FileStore.
+  - I file prodotti sono `vin_summary_over_600.csv`, `detail_rows_over_600.csv`, `raw_vs_latest_check.csv`, `target_vin_all_updates.csv`.
+  - Il notebook ora stampa link diretti ai file, non piu' solo alla cartella Spark CSV.
+  - Corretta stringa `FileNotFoundError` nella lettura tabelle.
+- **Test/verifiche**:
+  - `python -m py_compile Task_temp_600/DOC600_VIN_Extraction.py`: ok.
+- **Prossimi passi**:
+  - Pull su Databricks e rilanciare l'ultima cella export.
+  - Usare i link diretti stampati per scaricare i CSV.
+
 ### 2026-06-09 - Codex - branch `main`
 
 - **Obiettivo**: evitare ImportError alla prima cella del notebook se Databricks ha `run_local_sample.py` vecchio/cacheato.

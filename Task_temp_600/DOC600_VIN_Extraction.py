@@ -85,9 +85,9 @@ def read_one_config(config_id):
         except AnalysisException as exc:
             errors.append(f"{table_path}: {exc}")
 
-    raise FileNotFoundError(f"Nessuna fat table caricata per config {config_id}.\
-" + "\
-".join(errors))
+    raise FileNotFoundError(
+        f"Nessuna fat table caricata per config {config_id}.\n" + "\n".join(errors)
+    )
 
 df_raw = None
 for cfg in sorted(config):
@@ -259,7 +259,7 @@ df_detail_over_600.display()
 # MAGIC %md
 # MAGIC ## Export opzionale su DBFS/FileStore
 # MAGIC 
-# MAGIC Esporta summary, dettaglio e controllo raw-vs-latest in CSV. Il path e' pensato per download da browser Databricks.
+# MAGIC Esporta summary, dettaglio e controllo raw-vs-latest in CSV singoli. I link stampati puntano direttamente ai file scaricabili da browser Databricks.
 
 # COMMAND ----------
 EXPORT_RESULTS = True
@@ -273,15 +273,43 @@ if EXPORT_RESULTS:
         "target_vin_all_updates": df_target_all_updates,
     }
 
+    def export_single_csv(df_out, output_name):
+        final_path = f"{dbfs_output_base}/{output_name}.csv"
+        tmp_path = f"{dbfs_output_base}/_tmp_{output_name}"
+        row_count = df_out.count()
+
+        dbutils.fs.rm(tmp_path, True)
+        df_out.coalesce(1).write.mode("overwrite").option("header", "true").csv(tmp_path)
+
+        part_files = [
+            file_info
+            for file_info in dbutils.fs.ls(tmp_path)
+            if file_info.name.startswith("part-") and file_info.name.endswith(".csv")
+        ]
+        if not part_files:
+            raise FileNotFoundError(f"Nessun part CSV generato per {output_name}: {tmp_path}")
+
+        dbutils.fs.rm(final_path, True)
+        dbutils.fs.cp(part_files[0].path, final_path, True)
+        dbutils.fs.rm(tmp_path, True)
+
+        log_step(f"Esportato {output_name}: {final_path} ({row_count} righe)")
+        return final_path, row_count
+
+    exported_files = []
     for name, df_out in outputs.items():
-        output_path = f"{dbfs_output_base}/{name}"
-        df_out.coalesce(1).write.mode("overwrite").option("header", "true").csv(output_path)
-        log_step(f"Esportato {name}: {output_path}")
+        exported_files.append(export_single_csv(df_out, name))
 
     try:
         workspace_url = spark.conf.get("spark.databricks.workspaceUrl", None)
         if workspace_url:
-            print(f"Download folder: https://{workspace_url}/files/iveco_statistics_output/task_temp_600/")
+            print("Download file:")
+            for dbfs_path, row_count in exported_files:
+                file_name = dbfs_path.rsplit("/", 1)[-1]
+                print(
+                    f"- {file_name} ({row_count} righe): "
+                    f"https://{workspace_url}/files/iveco_statistics_output/task_temp_600/{file_name}"
+                )
     except Exception:
         pass
 else:
