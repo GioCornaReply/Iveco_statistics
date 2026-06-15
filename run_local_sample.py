@@ -332,6 +332,9 @@ def sort_report_rows(df):
 
     df_sorted = df.copy()
     for col_name in sort_order_columns:
+        df_sorted[col_name] = df_sorted[col_name].map(
+            lambda value: value.strip() if isinstance(value, str) else value
+        )
         df_sorted[col_name] = pd.Categorical(
             df_sorted[col_name],
             categories=REPORT_SORT_ORDERS[col_name],
@@ -351,7 +354,9 @@ def sort_report_rows(df):
         col_name for col_name in leading_group_cols if col_name in REPORT_SORT_ORDERS
     ]
     if not leading_sort_order_cols:
-        return df
+        leading_group_cols = [
+            col_name for col_name in df_sorted.columns if col_name in REPORT_SORT_ORDERS
+        ]
 
     sort_cols = leading_group_cols or sort_order_columns
 

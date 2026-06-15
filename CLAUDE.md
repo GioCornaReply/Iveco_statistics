@@ -49,6 +49,8 @@
 - Non deduplicare per VIN quando il confronto legacy richiede righe raw; per config 399 il README segnala differenze attese tra raw e latest VIN.
 - Non rinominare colonne ufficiali con stringhe ad hoc: usare dizionari/mapping esistenti.
 - Non ignorare i vincoli Excel: nomi sheet, limite righe e ordinamento categorie sono gestiti nel runner.
+- Ordinare sempre `mileage_range`, `mileage_split`, `mission` e range velocita' con gli ordini business, non lessicografici.
+- Per Mission Test: `4e` e' Urea Deposit, `4f` e' AdBlue Pressure Pump, `4g/4h/4i` sono percentuali, `5c` usa advice/alert sottrattivi.
 - Su cluster Databricks possono mancare `XlsxWriter`/`openpyxl`: il notebook modulare abilita `auto_install_excel_engine=True` nell'export.
 - Per copiare su DBFS usare sempre il `excel_path` restituito dall'export; non hardcodare `local_sample_statistics.xlsx` in modalita' `fat_table`.
 - Evitare import obbligatori di helper appena aggiunti nella prima cella notebook: usare lazy import/fallback se Databricks puo' avere moduli cacheati.

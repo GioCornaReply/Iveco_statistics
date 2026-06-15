@@ -1,8 +1,8 @@
 import unittest
 
-from engine_config import get_columns_for_sheet, is_new_layout_series
+from engine_config import get_columns_for_sheet, get_sheet_settings, is_new_layout_series
 from engine_loader import get_export_file_name, get_table_path
-from run_local_sample import MISSION_ORDER, prepare_excel_dataframe
+from run_local_sample import MILEAGE_RANGE_ORDER, MISSION_ORDER, prepare_excel_dataframe
 
 import pandas as pd
 
@@ -84,6 +84,70 @@ class Config405406Test(unittest.TestCase):
         self.assertIn("Low Load (250-2500 rpm / 0-15%)", exported.columns)
         self.assertEqual(exported.columns[-1], "count")
         self.assertEqual(list(exported.columns).count("count"), 1)
+
+    def test_excel_export_sorts_mileage_and_mission_with_multiple_group_columns(self):
+        df = pd.DataFrame(
+            {
+                "engine_model": ["Cursor 9"] * 5,
+                "power": ["340 C9"] * 5,
+                "mileage_range": [
+                    "10k-100k km",
+                    "10k-100k km",
+                    "<10k km",
+                    "<10k km",
+                    "10k-100k km",
+                ],
+                "mission": [
+                    "20 - 40 km/h URBAN",
+                    "<20 km/h HEAVY URBAN",
+                    "20 - 40 km/h URBAN",
+                    "<20 km/h HEAVY URBAN",
+                    "40 - 50 km/h MIX URBAN/ MEDIUM HIGHWAY",
+                ],
+                "CAT_EFF_SCR_2_A_4A": [1, 2, 3, 4, 5],
+            }
+        )
+
+        exported = prepare_excel_dataframe(df)
+
+        self.assertEqual(
+            exported["mileage range"].tolist(),
+            ["<10k km", "<10k km", "10k-100k km", "10k-100k km", "10k-100k km"],
+        )
+        self.assertEqual(
+            exported["mission"].tolist(),
+            [
+                "<20 km/h HEAVY URBAN",
+                "20 - 40 km/h URBAN",
+                "<20 km/h HEAVY URBAN",
+                "20 - 40 km/h URBAN",
+                "40 - 50 km/h MIX URBAN/ MEDIUM HIGHWAY",
+            ],
+        )
+        self.assertEqual(exported["mileage range"].iloc[0], MILEAGE_RANGE_ORDER[0])
+
+    def test_customer_notes_update_sheets_4e_4f_temperature_and_5c(self):
+        self.assertEqual(get_sheet_settings("4e")["name"], "4e) Urea Deposit")
+        self.assertEqual(
+            get_columns_for_sheet("X-WAY MY24 AT/AD_V1.6.4 C9", "IVECO_X-WAY", "4e"),
+            ["urea_dep_1", "urea_dep_2", "urea_dep_3", "urea_dep_4"],
+        )
+        self.assertEqual(get_sheet_settings("4f")["name"], "4f) AdBlue Pressure Pump")
+        self.assertEqual(
+            get_columns_for_sheet("X-WAY MY24 AT/AD_V1.6.4 C9", "IVECO_X-WAY", "4f"),
+            ["urea_p_1", "urea_p_2", "urea_p_3", "urea_p_4"],
+        )
+
+        for sheet_id in (
+            "4g_doc_upstream_temperature",
+            "4h_scr_upstream_temperature",
+            "4i_scr_downstream_temperature",
+        ):
+            settings = get_sheet_settings(sheet_id)
+            self.assertTrue(settings["use_percentage_columns"])
+            self.assertFalse(settings["zero_as_null"])
+
+        self.assertEqual(get_sheet_settings("5c")["trigger"], 0)
 
 
 if __name__ == "__main__":

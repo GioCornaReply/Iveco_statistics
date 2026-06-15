@@ -10,6 +10,30 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-06-15 - Codex - branch `main`
+
+- **Obiettivo**: applicare appunti cliente 405 a tutta la pipeline `Main_pipeline_modular`.
+- **Contesto letto**: `CLAUDE.md`, `handoff.md`, stato Git, `engine_config.py`, `run_local_sample.py`, test esistenti e riferimenti legacy.
+- **Input cliente**:
+  - Ordinamento errato di `mileage_range` e `mission` negli Excel.
+  - Verifica grouping per `product_model`, `power`, `axle_description`, `mission`.
+  - `4e` deve essere Urea Deposit, non AdBlue Pressure Pump.
+  - Rimuovere Upstream Temperature come `4f`; `4f` diventa AdBlue Pressure Pump.
+  - `4g/4h/4i` devono essere percentuali, non secondi.
+  - `5c` Diff pressure of DPF deve calcolare advice/alert sottraendo dalla media.
+- **Azioni fatte**:
+  - Corretto ordinamento export per categorie business anche con piu' colonne di raggruppamento.
+  - Corretto mapping `4e` -> `urea_dep_*`.
+  - Corretto mapping `4f` -> `urea_p_*`.
+  - Impostati `4g_doc_upstream_temperature`, `4h_scr_upstream_temperature`, `4i_scr_downstream_temperature` come percentuali.
+  - Impostato trigger sottrattivo per `5c`.
+  - Aggiunti test mirati su ordinamento e configurazioni fogli.
+- **Test/verifiche**:
+  - `python -m pytest tests/`: 14 passed.
+  - Nota: resta warning non bloccante `langsmith`/Pydantic V1 con Python 3.14.
+- **Prossimi passi**:
+  - Rigenerare Excel su Databricks per 405 e verificare visivamente fogli citati dal cliente.
+
 ### 2026-06-12 - Codex - branch `main`
 
 - **Obiettivo**: creare notebook one-shot per richiesta cliente su VIN con secondi > 600 C.
