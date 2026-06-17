@@ -1,6 +1,12 @@
 import unittest
 
-from engine_config import get_columns_for_sheet, get_sheet_settings, is_new_layout_series
+from engine_config import (
+    get_columns_for_sheet,
+    get_default_sheet_ids,
+    get_sheet_name_for_context,
+    get_sheet_settings,
+    is_new_layout_series,
+)
 from engine_loader import get_export_file_name, get_table_path
 from run_local_sample import MILEAGE_RANGE_ORDER, MISSION_ORDER, prepare_excel_dataframe
 
@@ -127,12 +133,12 @@ class Config405406Test(unittest.TestCase):
         self.assertEqual(exported["mileage range"].iloc[0], MILEAGE_RANGE_ORDER[0])
 
     def test_customer_notes_update_sheets_4e_4f_temperature_and_5c(self):
-        self.assertEqual(get_sheet_settings("4e")["name"], "4e) Urea Deposit")
+        self.assertEqual(get_sheet_settings("4e")["name"], "4e) Urea deposit accumulation")
         self.assertEqual(
             get_columns_for_sheet("X-WAY MY24 AT/AD_V1.6.4 C9", "IVECO_X-WAY", "4e"),
             ["urea_dep_1", "urea_dep_2", "urea_dep_3", "urea_dep_4"],
         )
-        self.assertEqual(get_sheet_settings("4f")["name"], "4f) AdBlue Pressure Pump")
+        self.assertEqual(get_sheet_settings("4f")["name"], "4f) AdBlue pressure pump")
         self.assertEqual(
             get_columns_for_sheet("X-WAY MY24 AT/AD_V1.6.4 C9", "IVECO_X-WAY", "4f"),
             ["urea_p_1", "urea_p_2", "urea_p_3", "urea_p_4"],
@@ -148,6 +154,51 @@ class Config405406Test(unittest.TestCase):
             self.assertFalse(settings["zero_as_null"])
 
         self.assertEqual(get_sheet_settings("5c")["trigger"], 0)
+
+    def test_sheet_names_follow_latest_catalog_with_excel_safe_abbreviations(self):
+        expected_names = {
+            "1a": "1a) Engine Torque-Speed",
+            "1b": "1b) Engine Torque-Veh Speed",
+            "2a": "2a) Oil Pressure Analysis",
+            "3c_1": "3c) Fuel pre-filter pressure",
+            "3c": "3d) Intake air temperature",
+            "3d": "3e) Intake air pressure",
+            "3e": "3f) Flap actuator position",
+            "3f": "3g) EGR actuator position",
+            "4a_1": "4a_1) Catalyst eff [g-kWh]",
+            "4a": "4a_2) Catalyst eff [g-kWh]",
+            "4e": "4e) Urea deposit accumulation",
+            "4f": "4f) AdBlue pressure pump",
+            "4g_doc_upstream_temperature": "4g) DOC upstream temperature",
+            "4h_scr_upstream_temperature": "4h) SCR upstream temperature",
+            "4i_scr_downstream_temperature": "4i) SCR downstream temperature",
+            "5c": "5c) DPF differential pressure",
+        }
+
+        for sheet_id, expected_name in expected_names.items():
+            self.assertEqual(get_sheet_settings(sheet_id)["name"], expected_name)
+            self.assertLessEqual(len(expected_name), 31)
+
+    def test_default_sheet_order_matches_catalog_sequence_for_3c_to_4i(self):
+        sheet_ids = get_default_sheet_ids()
+
+        self.assertNotIn("4h", sheet_ids)
+        self.assertLess(sheet_ids.index("3c_1"), sheet_ids.index("3c"))
+        self.assertLess(sheet_ids.index("3c"), sheet_ids.index("3d"))
+        self.assertLess(sheet_ids.index("4f"), sheet_ids.index("4g_doc_upstream_temperature"))
+        self.assertLess(sheet_ids.index("4g_doc_upstream_temperature"), sheet_ids.index("4h_scr_upstream_temperature"))
+        self.assertLess(sheet_ids.index("4h_scr_upstream_temperature"), sheet_ids.index("4i_scr_downstream_temperature"))
+        self.assertLess(sheet_ids.index("4i_scr_downstream_temperature"), sheet_ids.index("5a_dpf"))
+
+    def test_sheet_name_can_change_by_series_context(self):
+        self.assertEqual(
+            get_sheet_name_for_context("S_WAY_AT_AD_MY_2024", "IVECO_S_WAY", "2a"),
+            "2a_1) Oil pressure",
+        )
+        self.assertEqual(
+            get_sheet_name_for_context("X-WAY MY24 AT/AD_V1.6.4 C9", "IVECO_X-WAY", "2a"),
+            "2a) Oil Pressure Analysis",
+        )
 
 
 if __name__ == "__main__":

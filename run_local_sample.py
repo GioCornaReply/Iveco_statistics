@@ -25,6 +25,7 @@ from engine_config import (
     VARIABLE_DISPLAY_NAMES,
     get_columns_for_sheet,
     get_default_sheet_ids,
+    get_sheet_name_for_context,
     get_sheet_settings,
 )
 from engine_loader import extract_metadata, get_export_file_name, import_fat_tables_3
@@ -165,6 +166,7 @@ def validate_config_columns(df, p_series, p_group, sheet_ids):
             "configured": configured,
             "present": present,
             "missing": missing,
+            "sheet_name": get_sheet_name_for_context(p_series, p_group, sheet_id),
         }
 
         log_step(
@@ -185,14 +187,14 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
 
     if settings["kind"] == "dataset":
         log_step(f"Sheet {sheet_id}: export diretto del dataset completo")
-        return df.toPandas(), settings["name"]
+        return df.toPandas(), validation_entry.get("sheet_name", settings["name"])
 
     if not present_cols:
         log_step(f"Sheet {sheet_id}: nessuna colonna presente, export saltato")
-        return None, settings["name"]
+        return None, validation_entry.get("sheet_name", settings["name"])
     if not group_by:
         log_step(f"Sheet {sheet_id}: colonne group_by non presenti, export saltato")
-        return None, settings["name"]
+        return None, validation_entry.get("sheet_name", settings["name"])
 
     if settings["use_percentage_columns"]:
         df_stats = pyspark_variabili_x(df, present_cols, sheet_id)
@@ -234,7 +236,7 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
         triggers,
         target_columns=settings["target_columns"],
     )
-    return df_pivot, settings["name"]
+    return df_pivot, validation_entry.get("sheet_name", settings["name"])
 
 
 def build_sheet_outputs(df, validation):

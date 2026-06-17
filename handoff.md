@@ -10,6 +10,24 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-06-17 - Codex - branch `main`
+
+- **Obiettivo**: allineare nomi sheet Excel e nomi variabili Mission Test alla tabella cliente `Table Name / Item Name / Variable Name`.
+- **Contesto letto**: `CLAUDE.md`, `handoff.md`, stato Git, `engine_config.py`, `run_local_sample.py`, test esistenti e tabella allegata dal cliente.
+- **Azioni fatte**:
+  - Verificato che tutte le `Variable Name` della tabella siano presenti in `VARIABLE_DISPLAY_NAMES`.
+  - Aggiornati i nomi sheet Mission Test con abbreviazioni entro il limite Excel di 31 caratteri.
+  - Corretto l'ordine default `3c -> 3d -> 3e -> 3f -> 3g` usando gli sheet interni esistenti.
+  - Rimosso dal default il vecchio sheet interno `4h`, duplicato rispetto al catalogo nuovo `4i`.
+  - Aggiunto nome sheet dinamico per `2a`: per `S_WAY_AT_AD_MY_2024` diventa `2a_1) Oil pressure`.
+  - Aggiunti test per nomi sheet, ordine catalogo e nome dinamico per serie.
+- **Test/verifiche**:
+  - `python -m pytest tests/`: 17 passed.
+  - Nota: resta warning non bloccante `langsmith`/Pydantic V1 con Python 3.14.
+- **Prossimi passi**:
+  - Rigenerare Excel su Databricks e confrontare i tab con la tabella cliente.
+  - Pubblicare i commit quando la credenziale GitHub locale sara' sistemata.
+
 ### 2026-06-15 - Codex - branch `main`
 
 - **Obiettivo**: applicare appunti cliente 405 a tutta la pipeline `Main_pipeline_modular`.

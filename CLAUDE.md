@@ -35,7 +35,7 @@
 - Ricreare feature legacy con `add_legacy_preparation_features()` invece di duplicare logica nei notebook.
 - Per statistiche/pivot usare `report_pivot_pyspark_fixed()`; il nome storico `report_pivot_pyspark()` delega alla versione robusta.
 - Per percentuali di gruppi di colonne usare `pyspark_variabili_x()`.
-- Per sheet Mission Test usare `get_columns_for_sheet()`, `get_sheet_settings()` e `get_default_sheet_ids()`.
+- Per sheet Mission Test usare `get_columns_for_sheet()`, `get_sheet_name_for_context()`, `get_sheet_settings()` e `get_default_sheet_ids()`.
 - Per VODR usare `get_vodr_report_sheets()`, `get_vodr_percentage_groups()` e `parse_config_text()`.
 - Per export Excel riusare `export_excel_outputs()` e `prepare_excel_dataframe()` da `run_local_sample.py`.
 - Aggiungere test mirati in `tests/` quando si toccano mapping config, nomi export, sheet, parser o ordinamenti Excel.
@@ -49,8 +49,10 @@
 - Non deduplicare per VIN quando il confronto legacy richiede righe raw; per config 399 il README segnala differenze attese tra raw e latest VIN.
 - Non rinominare colonne ufficiali con stringhe ad hoc: usare dizionari/mapping esistenti.
 - Non ignorare i vincoli Excel: nomi sheet, limite righe e ordinamento categorie sono gestiti nel runner.
+- Per i nomi sheet e item Mission Test, la fonte e' il catalogo `Table Name / Item Name / Variable Name`; abbreviare i `Table Name` oltre 31 caratteri ma mantenere numero e significato.
 - Ordinare sempre `mileage_range`, `mileage_split`, `mission` e range velocita' con gli ordini business, non lessicografici.
-- Per Mission Test: `4e` e' Urea Deposit, `4f` e' AdBlue Pressure Pump, `4g/4h/4i` sono percentuali, `5c` usa advice/alert sottrattivi.
+- Per Mission Test: `4e` e' Urea Deposit accumulation, `4f` e' AdBlue pressure pump, `4g/4h/4i` sono percentuali, `5c` usa advice/alert sottrattivi.
+- Non usare i vecchi Excel locali come fonte nomi per `4e/4f/4h`: contengono nomi storici ormai superati.
 - Su cluster Databricks possono mancare `XlsxWriter`/`openpyxl`: il notebook modulare abilita `auto_install_excel_engine=True` nell'export.
 - Per copiare su DBFS usare sempre il `excel_path` restituito dall'export; non hardcodare `local_sample_statistics.xlsx` in modalita' `fat_table`.
 - Evitare import obbligatori di helper appena aggiunti nella prima cella notebook: usare lazy import/fallback se Databricks puo' avere moduli cacheati.
