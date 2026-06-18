@@ -559,18 +559,27 @@ def run_local_sample(
             log_step(f"Lettura sample locale: {sample_path}")
 
         df_raw = read_input_data(spark, input_mode, sample_path, input_format, config)
-        report_dim(df_raw, "RAW input")
-        report_vin(df_raw)
+        log_step(f"RAW input dataframe creato: columns={len(df_raw.columns)}")
+        if input_mode == "sample":
+            report_dim(df_raw, "RAW input")
+            report_vin(df_raw)
+        else:
+            log_step("Salto count/VIN automatici su fat_table")
 
         log_step("Pulizia nomi colonne")
         df_clean = clean_spark_column_names(df_raw)
-        report_dim(df_clean, "LOCAL CLEAN sample")
+        log_step(f"LOCAL CLEAN dataframe creato: columns={len(df_clean.columns)}")
+        if input_mode == "sample":
+            report_dim(df_clean, "LOCAL CLEAN sample")
 
         if keep_latest_per_vin:
             log_step("Filtro ultimo record disponibile per VIN")
             df_clean = keep_latest_record_per_vin(df_clean)
-            report_dim(df_clean, "LOCAL LATEST VIN sample")
-            report_vin(df_clean)
+            if input_mode == "sample":
+                report_dim(df_clean, "LOCAL LATEST VIN sample")
+                report_vin(df_clean)
+            else:
+                log_step("Deduplica VIN applicata; count automatico saltato su fat_table")
 
         log_step("Arricchimento colonne legacy Prep")
         df_clean = add_legacy_preparation_features(df_clean)
