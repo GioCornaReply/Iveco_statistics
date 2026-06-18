@@ -15,6 +15,7 @@ VODR_STATISTICS_CONFIGS = {
     52,
     53,
     54,
+    56,
 }
 
 VODR_EXCLUDED_VINS = [
