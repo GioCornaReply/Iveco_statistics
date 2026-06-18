@@ -28,7 +28,12 @@ from engine_config import (
     get_sheet_name_for_context,
     get_sheet_settings,
 )
-from engine_loader import extract_metadata, get_export_file_name, import_fat_tables_3
+from engine_loader import (
+    extract_metadata,
+    get_export_file_name,
+    get_metadata_for_config,
+    import_fat_tables_3,
+)
 from engine_stats import pyspark_variabili_x, report_pivot_pyspark_fixed
 from engine_utils import get_current_timestamp, log_step, report_dim, report_vin
 
@@ -584,7 +589,12 @@ def run_local_sample(
         log_step("Arricchimento colonne legacy Prep")
         df_clean = add_legacy_preparation_features(df_clean)
 
-        p_type, p_group, p_series = extract_metadata(df_clean)
+        metadata_from_config = get_metadata_for_config(config) if input_mode == "fat_table" else None
+        if metadata_from_config:
+            p_type, p_group, p_series = metadata_from_config
+            log_step("Metadata rilevati da config, senza lettura righe fat_table")
+        else:
+            p_type, p_group, p_series = extract_metadata(df_clean)
         log_step(f"Metadata rilevati: type={p_type}, group={p_group}, series={p_series}")
 
         validation = validate_config_columns(df_clean, p_series, p_group, sheet_ids)

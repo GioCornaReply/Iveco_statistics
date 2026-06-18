@@ -7,7 +7,7 @@ from engine_config import (
     get_sheet_settings,
     is_new_layout_series,
 )
-from engine_loader import get_export_file_name, get_table_path
+from engine_loader import get_export_file_name, get_metadata_for_config, get_table_path
 from run_local_sample import MILEAGE_RANGE_ORDER, MISSION_ORDER, prepare_excel_dataframe
 
 import pandas as pd
@@ -20,6 +20,24 @@ class Config405406Test(unittest.TestCase):
                 get_table_path(config),
                 f"u_truck_analyzer_p.mission_test_statistics.fat_table_{config}",
             )
+
+    def test_known_fat_table_configs_use_static_metadata(self):
+        self.assertEqual(
+            get_metadata_for_config({399}),
+            ("MISSION_TEST", "IVECO_S_WAY", "S_WAY_AT_AD_MY_2024"),
+        )
+        self.assertEqual(
+            get_metadata_for_config({405}),
+            ("MISSION_TEST", "IVECO_X_WAY", "X_WAY_AT_AD_MY_2024"),
+        )
+        self.assertEqual(
+            get_metadata_for_config({406}),
+            ("MISSION_TEST", "IVECO_T_WAY", "T_WAY_MY_2024"),
+        )
+        self.assertEqual(
+            get_metadata_for_config({408}),
+            ("MISSION_TEST", "IVECO_X_WAY", "X_WAY_AT_AD_MY_2024"),
+        )
 
     def test_my24_series_variants_use_new_layout_columns(self):
         self.assertTrue(is_new_layout_series("X-WAY MY24 AT/AD_V1.6.4 C9"))

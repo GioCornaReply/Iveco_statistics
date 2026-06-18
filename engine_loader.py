@@ -12,6 +12,13 @@ MISSION_TEST_STATISTICS_CONFIGS = {
     408,
 }
 
+CONFIG_METADATA = {
+    399: ("MISSION_TEST", "IVECO_S_WAY", "S_WAY_AT_AD_MY_2024"),
+    405: ("MISSION_TEST", "IVECO_X_WAY", "X_WAY_AT_AD_MY_2024"),
+    406: ("MISSION_TEST", "IVECO_T_WAY", "T_WAY_MY_2024"),
+    408: ("MISSION_TEST", "IVECO_X_WAY", "X_WAY_AT_AD_MY_2024"),
+}
+
 VODR_STATISTICS_CONFIGS = {
     33,
     49,
@@ -87,6 +94,29 @@ def get_export_file_name(product_group, config):
     }
     prefix = mapping.get(normalized_group, "GENERIC")
     return f"Statistics_{prefix}_{config_str}_dataset.xlsx"
+
+
+def get_metadata_for_config(config):
+    """Restituisce metadata noti senza leggere righe Spark, quando la config lo consente."""
+    config_values = {int(v) for v in config} if isinstance(config, (set, list, tuple)) else {int(config)}
+    metadata_values = [CONFIG_METADATA.get(value) for value in sorted(config_values)]
+    known_values = [value for value in metadata_values if value is not None]
+
+    if len(known_values) != len(config_values):
+        return None
+
+    if len(set(known_values)) == 1:
+        return known_values[0]
+
+    product_types = {value[0] for value in known_values}
+    product_groups = {value[1] for value in known_values}
+    product_series = {value[2] for value in known_values}
+
+    return (
+        product_types.pop() if len(product_types) == 1 else "MIXED",
+        product_groups.pop() if len(product_groups) == 1 else "MIXED",
+        product_series.pop() if len(product_series) == 1 else "MIXED",
+    )
 
 
 def extract_metadata(df):
