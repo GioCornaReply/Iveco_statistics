@@ -713,6 +713,7 @@ REPORT_SHEET_CONFIG = {
     },
     "4e": {
         "name": "4e) Urea deposit accumulation",
+        "group_by": ["engine_model", "mission"],
         "skip_groups": {"EUROCARGO"},
         "new_layout": ["urea_dep_1", "urea_dep_2", "urea_dep_3", "urea_dep_4"],
         "legacy": ["adblue_deposit1", "adblue_deposit2", "adblue_deposit3", "adblue_deposit4"],
@@ -882,6 +883,7 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["engine_model"],
         "trigger": 1,
         "zero_as_null": True,
+        "zero_as_null_exclude": ["Turbochargerrevolutions_130000"],
     },
 }
 
@@ -927,6 +929,7 @@ def get_sheet_settings(sheet_id):
         "target_columns": conf.get("target_columns"),
         "use_percentage_columns": conf.get("use_percentage_columns", True),
         "zero_as_null": conf.get("zero_as_null", False),
+        "zero_as_null_exclude": conf.get("zero_as_null_exclude", []),
         "max_value": conf.get("max_value"),
         "scale": conf.get("scale", 1),
     }

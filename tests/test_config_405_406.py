@@ -134,6 +134,7 @@ class Config405406Test(unittest.TestCase):
 
     def test_customer_notes_update_sheets_4e_4f_temperature_and_5c(self):
         self.assertEqual(get_sheet_settings("4e")["name"], "4e) Urea deposit accumulation")
+        self.assertEqual(get_sheet_settings("4e")["group_by"], ["engine_model", "mission"])
         self.assertEqual(
             get_columns_for_sheet("X-WAY MY24 AT/AD_V1.6.4 C9", "IVECO_X-WAY", "4e"),
             ["urea_dep_1", "urea_dep_2", "urea_dep_3", "urea_dep_4"],
@@ -154,6 +155,12 @@ class Config405406Test(unittest.TestCase):
             self.assertFalse(settings["zero_as_null"])
 
         self.assertEqual(get_sheet_settings("5c")["trigger"], 0)
+
+    def test_turbocharger_130000_keeps_zero_values(self):
+        settings = get_sheet_settings("turbocharger_revolutions")
+
+        self.assertTrue(settings["zero_as_null"])
+        self.assertEqual(settings["zero_as_null_exclude"], ["Turbochargerrevolutions_130000"])
 
     def test_sheet_names_follow_latest_catalog_with_excel_safe_abbreviations(self):
         expected_names = {

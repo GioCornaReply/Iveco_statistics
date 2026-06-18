@@ -204,7 +204,10 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
         pivot_cols = present_cols
 
     if settings["zero_as_null"]:
+        zero_as_null_exclude = set(settings["zero_as_null_exclude"])
         for col_name in pivot_cols:
+            if col_name in zero_as_null_exclude:
+                continue
             df_stats = df_stats.withColumn(
                 col_name,
                 F.when(F.col(col_name).cast("double") == 0, None).otherwise(F.col(col_name)),
