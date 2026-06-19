@@ -207,6 +207,88 @@ VODR_PERCENTAGE_GROUPS = {
     ],
 }
 
+VODR_56_PERCENTAGE_GROUPS = {
+    "2": ["Ped1", "Ped2", "Ped3", "Ped4"],
+    "1": [
+        "LowIdle",
+        "Lowload",
+        "LowL",
+        "HighFuelone",
+        "Optcons",
+        "Highspeedlow",
+        "Highfueltre",
+        "Highfuellast",
+    ],
+    "3": ["EngCool106", "Engcool110", "EngCol200"],
+    "4": ["OilTemp114", "Oiltemp200"],
+    "5": ["Weight7", "Weight20", "Weight25", "Weight30", "Weight40", "Weight55", "WeightFF"],
+    "6": ["Veh2", "Veh20", "Veh50", "Veh80", "Veh86", "Veh90", "Veh96", "Veh100", "Veh150"],
+    "7": [
+        "ExTempmeno30",
+        "ExTempmeno0",
+        "ExTempmeno10",
+        "ExTempmeno25",
+        "ExTemp30",
+        "ExTemp35",
+        "ExTemp36",
+    ],
+    "8": ["Brk1", "Brk2", "Brk3", "Brk4", "Brk5"],
+    "4a": ["GearR1", "GearN", "Gear1", "Gear2", "Gear3", "Gear4", "Gear5", "Gear6", "Gear7", "Gear8", "Gear9"],
+    "5a": [
+        "Vbattmeno20",
+        "Vbatt2023",
+        "Vbatt2425",
+        "Vbatt25",
+        "Vbattmeno20IDLE",
+        "Vbatt2023idle",
+        "Vbatt2425idle",
+        "Vbatt25idle",
+        "Vbatt2531idle",
+        "Vbatt31idle",
+    ],
+    "5b": [
+        "Soc20OFF",
+        "Soc2050OFF",
+        "Soc5070OFF",
+        "Soc7090OFF",
+        "Soc100OFF",
+        "Soc20ON",
+        "Soc50ON",
+        "Soc70ON",
+        "Soc90ON",
+        "Soc100ON",
+    ],
+    "5c": [
+        "Soh20OFF",
+        "Soh50OFF",
+        "Soh70OFF",
+        "Soh90OFF",
+        "Soh100OFF",
+        "Soh20ON",
+        "Soh50ON",
+        "Soh70ON",
+        "Soh90ON",
+        "Soh100ON",
+    ],
+    "6a": ["Crk700", "Crk1500", "Crkoltre1500"],
+    "6b": ["Crkcur200", "Crkcur500", "Crkcur600", "Crkcuroltre600"],
+    "6c": ["CrkVolt21", "CrkVolt23", "CrkVolt25", "CrkVoltoltre25"],
+    "6d": [
+        "Cur10",
+        "Cur30",
+        "Cur50",
+        "Cur70",
+        "Cur90",
+        "Cur91",
+        "Cureng10",
+        "Cureng30",
+        "Cureng50",
+        "Cureng70",
+        "Cureng90",
+        "Cureng91",
+    ],
+}
+
 VODR_REPORT_SHEETS = [
     {
         "sheet_id": "complete_dataset",
@@ -529,25 +611,202 @@ VODR_REPORT_SHEETS = [
     },
 ]
 
+VODR_56_REPORT_SHEETS = [
+    {
+        "sheet_id": "complete_dataset",
+        "name": "Complete Dataset",
+        "kind": "dataset",
+    },
+    {
+        "sheet_id": "2",
+        "name": "2) Accelerator pedal position",
+        "source_table_name": "2) Accelerator pedal position Data analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["2"],
+        "triggers": [0, 0, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "1",
+        "name": "1) Eng Speed-Torque Analysis",
+        "source_table_name": "1) Engine Speed / Engine Torque Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["1"],
+        "triggers": [1, 0, 1, 1, 0, 1, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "3",
+        "name": "3) Engine coolant temp",
+        "source_table_name": "3) Engine coolant temperature Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["3"],
+        "triggers": [0, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "4",
+        "name": "4) Engine oil temp",
+        "source_table_name": "4) Engine oil temperature Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["4"],
+        "triggers": [0, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "5",
+        "name": "5) Vehicle weight Time",
+        "source_table_name": "5) Vehicle weight Time Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["5"],
+        "triggers": [0, 0, 0, 1, 1, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "6",
+        "name": "6) Vehicle speed",
+        "source_table_name": "6) Vehicle speed Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["6"],
+        "triggers": [1, 0, 0, 0, 0, 1, 1, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "7",
+        "name": "7) External temperature",
+        "source_table_name": "7) External temperature Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["7"],
+        "triggers": [1, 1, 0, 0, 0, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "8",
+        "name": "8) Brake pedal position",
+        "source_table_name": "8) Brake pedal position data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["8"],
+        "triggers": [0, 0, 0, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "4a",
+        "name": "4a) Gear shift",
+        "source_table_name": "4a) Gear shift Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["4a"],
+        "triggers": [1] * 11,
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "5a",
+        "name": "5a) Battery Voltage",
+        "source_table_name": "5a) Battery Voltage Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["5a"],
+        "triggers": [1, 1, 0, 0, 1, 1, 1, 0, 0, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "5b",
+        "name": "5b) Battery SOC",
+        "source_table_name": "5b) Battery SOC Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mileage_range", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["5b"],
+        "triggers": [1, 1, 1, 0, 0, 1, 1, 1, 0, 0],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "5c",
+        "name": "5c) Battery SOH",
+        "source_table_name": "5c) Battery SOH Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mileage_range", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["5c"],
+        "triggers": [1, 1, 1, 0, 0, 1, 1, 1, 0, 0],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "6a",
+        "name": "6a) Cranking Time",
+        "source_table_name": "6a) Cranking Time Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mileage_range", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["6a"],
+        "triggers": [0, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "6b",
+        "name": "6b) Current during Cranking",
+        "source_table_name": "6b) Current measured during Cranking-Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mileage_range", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["6b"],
+        "triggers": [0, 1, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "6c",
+        "name": "6c) Voltage during Cranking",
+        "source_table_name": "6c) Voltage measured during Cranking-Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mileage_range", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["6c"],
+        "triggers": [1, 1, 0, 0],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "6d",
+        "name": "6d) Current measured",
+        "source_table_name": "6d) Current measured Data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": VODR_56_PERCENTAGE_GROUPS["6d"],
+        "triggers": [0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+        "use_percentage_columns": True,
+    },
+    {
+        "sheet_id": "7a",
+        "name": "7a) ACC AEBS speed alerts",
+        "source_table_name": "7a) ACC/AEBS driving alerts/vehicle speed data Analysis",
+        "group_by": ["product_series", "product_model", "power", "mission"],
+        "columns": ["Aebs95"],
+        "triggers": [1],
+        "use_percentage_columns": False,
+    },
+]
+
+
+def _normalize_config_set(config):
+    if config is None:
+        return None
+    if isinstance(config, (set, list, tuple)):
+        return {int(value) for value in config}
+    return {int(config)}
+
 
 def config_mt_from_vodr(config):
     """Restituisce le config Mission Test collegate alle config VODR."""
-    normalized = frozenset(int(value) for value in config)
+    normalized = frozenset(_normalize_config_set(config))
     return set(VODR_TO_MT_CONFIGS.get(normalized, DEFAULT_VODR_MT_CONFIGS))
 
 
 def get_vodr_percentage_groups(config):
     """Restituisce i gruppi percentuali, con la variante storica per config 5/19."""
+    config_set = _normalize_config_set(config)
+    if config_set == {56}:
+        return deepcopy(VODR_56_PERCENTAGE_GROUPS)
+
     groups = deepcopy(VODR_PERCENTAGE_GROUPS)
-    if set(config) == {5, 19}:
+    if config_set == {5, 19}:
         groups["4c"] = ["TimeAuto", "TimeSemi", "TimeAutoSuspendWithVehicleMoving"]
     return groups
 
 
 def get_vodr_report_sheets(config=None):
     """Restituisce la configurazione sheet VODR."""
+    config_set = _normalize_config_set(config)
+    if config_set == {56}:
+        return deepcopy(VODR_56_REPORT_SHEETS)
+
     sheets = deepcopy(VODR_REPORT_SHEETS)
-    if config is not None and set(config) == {5, 19}:
+    if config_set == {5, 19}:
         for sheet in sheets:
             if sheet.get("source_sheet_id", sheet["sheet_id"]) == "4c":
                 sheet["columns"] = ["TimeAuto", "TimeSemi", "TimeAutoSuspendWithVehicleMoving"]

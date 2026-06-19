@@ -3,6 +3,7 @@ data/sample/
 data/output/
 Excel_statistics/*.xlsx
 Excel_statistics/**/*.xlsx
+cestino/
 
 # Python local artifacts.
 __pycache__/
