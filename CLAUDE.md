@@ -22,7 +22,7 @@
 - Le liste hardcoded di sheet/colonne devono stare in `engine_config.py` o `vodr_config.py`, non nei notebook.
 - `get_table_path()` centralizza il routing delle config verso Unity Catalog o tabelle legacy.
 - Per Mission Test nuove config `399,400,401,402,405,406,408` si usa `u_truck_analyzer_p.mission_test_statistics.fat_table_<config>`.
-- Per VODR config `33,49,50,51,52,53,54,56` si usa `u_truck_analyzer_p.vodr_statistics.fat_table_<config>`.
+- Per VODR config `33,49,50,51,52,53,54` si usa `u_truck_analyzer_p.vodr_statistics.fat_table_<config>`.
 - Il fallback legacy resta presente per config vecchie, ma va trattato con cautela.
 - La priorita' per le colonne Mission Test e' Series > Group > fallback generico.
 - VODR puo' arricchire con Mission Test tramite join su `vin`; in locale normalmente si lavora su sample.
@@ -32,12 +32,11 @@
 
 - Normalizzare nomi colonna Spark con `clean_spark_column_names()` prima di usare variabili tecniche.
 - Se serve un record per VIN, usare `keep_latest_record_per_vin()` e indicare chiaramente quando invece mantenere tutti gli update.
-- Ricreare feature legacy con `add_legacy_preparation_features()` invece di duplicare logica nei notebook; questa deve riempire anche colonne esistenti ma vuote come `mission`, `mileage_range` e range velocita'.
+- Ricreare feature legacy con `add_legacy_preparation_features()` invece di duplicare logica nei notebook.
 - Per statistiche/pivot usare `report_pivot_pyspark_fixed()`; il nome storico `report_pivot_pyspark()` delega alla versione robusta.
 - Per percentuali di gruppi di colonne usare `pyspark_variabili_x()`.
 - Per sheet Mission Test usare `get_columns_for_sheet()`, `get_sheet_name_for_context()`, `get_sheet_settings()` e `get_default_sheet_ids()`.
 - Per VODR usare `get_vodr_report_sheets()`, `get_vodr_percentage_groups()` e `parse_config_text()`.
-- Per VODR config `56` usare il catalogo dedicato `VODR_56_REPORT_SHEETS` / `VODR_56_PERCENTAGE_GROUPS`, non gli sheet legacy VODR.
 - Per export Excel riusare `export_excel_outputs()` e `prepare_excel_dataframe()` da `run_local_sample.py`.
 - Aggiungere test mirati in `tests/` quando si toccano mapping config, nomi export, sheet, parser o ordinamenti Excel.
 
@@ -47,8 +46,6 @@
 - Non mettere nuove regole nel notebook se possono stare in un modulo Python.
 - Non assumere che config < 100 siano tutte VODR legacy: alcune VODR ora passano da Unity Catalog.
 - Non perdere la distinzione fra Mission Test e VODR: hanno config, nomi file e sheet diversi.
-- Non far ricadere la VODR config `56` sul catalogo legacy `1b/2a/...`: il cliente ha fornito un catalogo sheet/variabili dedicato.
-- Non assumere che una colonna derivata sia valida solo perche' esiste: nelle VODR puo' esistere `mission`/`mileage_range` ma essere tutta vuota, bloccando le pivot raggruppate.
 - Non deduplicare per VIN quando il confronto legacy richiede righe raw; per config 399 il README segnala differenze attese tra raw e latest VIN.
 - Non rinominare colonne ufficiali con stringhe ad hoc: usare dizionari/mapping esistenti.
 - Non ignorare i vincoli Excel: nomi sheet, limite righe e ordinamento categorie sono gestiti nel runner.

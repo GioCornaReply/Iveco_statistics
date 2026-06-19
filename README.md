@@ -13,8 +13,6 @@ L'obiettivo e' tenere Databricks per l'accesso ai dati completi e usare lo svilu
 - `engine_utils.py`: log, dimensioni, timestamp e naming.
 - `run_local_sample.py`: runner locale da terminale o VS Code debug.
 - `Main_pipeline_modular.ipynb`: notebook orchestratore con preview degli sheet prima dell'export.
-- `vodr_config.py` / `vodr_pipeline.py`: registry e pipeline dedicati ai report VODR.
-- `Main_pipeline_Vodr.ipynb`: notebook orchestratore VODR con preview ed export Excel.
 - `export_config_csv.py`: export Databricks del sample grezzo.
 - `Old_statistics/`: riferimento legacy dei notebook/script originali.
 
@@ -107,19 +105,6 @@ Per le richieste MY24 V1.6.4 C9, eseguire run separate dal widget `config`:
 406  # T-WAY MY24 V1.6.4 C9
 408  # Mission Test MY24 su Unity Catalog
 ```
-
-Per la pipeline VODR usa `Main_pipeline_Vodr.ipynb`. Le config VODR moderne,
-inclusa la `56`, leggono da:
-
-```text
-u_truck_analyzer_p.vodr_statistics.fat_table_<config>
-```
-
-La config `56` ha un catalogo sheet dedicato in `vodr_config.py`, derivato
-dalla tabella cliente `Selected Table order / Table name / Variable name`.
-I nomi sheet sono abbreviati entro il limite Excel di 31 caratteri, mantenendo
-numero e significato; gli sheet legacy VODR tipo `1b`, `2a`, `average_kick_down`
-restano invece per le altre config.
 
 Per testare da notebook/driver Databricks con pochi sheet:
 

@@ -10,36 +10,6 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
-### 2026-06-19 - Codex - branch `main`
-
-- **Obiettivo**: capire perche' molti sheet Excel VODR risultavano vuoti con `Main_pipeline_Vodr.ipynb` e config `56`, usando la tabella cliente `Selected Table order / Table name / Variable name`.
-- **Contesto letto**: `CLAUDE.md`, `handoff.md`, stato Git, `Main_pipeline_Vodr.ipynb`, `vodr_config.py`, `vodr_pipeline.py`, `tests/test_vodr_config.py`, `README.md` e allegato cliente.
-- **Causa individuata**:
-  - La config `56` era instradata correttamente su `u_truck_analyzer_p.vodr_statistics.fat_table_56`, ma ricadeva sul catalogo VODR legacy (`1b`, `2a`, `average_kick_down`, ecc.).
-  - Nel catalogo legacy mancavano variabili richieste dalla 56 come `LowIdle`, `EngCool106`, `OilTemp114`, `Soh90ON`, `Aebs95`; altri sheet invece erano extra rispetto all'allegato.
-  - Il notebook chiamava preview hardcoded per ID legacy e poteva fermarsi su `KeyError` quando il registry restituisce sheet diversi.
-  - Nel file reale `cestino/VODR_56_new_thresholds_19_06.xlsx`, molti placeholder derivavano anche da `mission` e `mileage_range` presenti nel `Complete Dataset` ma vuoti su tutte le 461 righe; la prep legacy non li riempiva perche' controllava solo l'esistenza della colonna.
-- **Azioni fatte**:
-  - Aggiunti `VODR_56_PERCENTAGE_GROUPS` e `VODR_56_REPORT_SHEETS` in `vodr_config.py` con i 17 sheet/110 variabili dell'allegato, piu' `Complete Dataset`.
-  - `get_vodr_percentage_groups({56})` e `get_vodr_report_sheets({56})` ora restituiscono il catalogo dedicato; le altre config restano sul catalogo legacy.
-  - Trattato `7a/Aebs95` come metrica raw (`use_percentage_columns=False`), non come percentuale di un gruppo monocolonna.
-  - Aggiornato `Main_pipeline_Vodr.ipynb` per saltare preview di sheet non configurati e aggiungere una preview dinamica degli sheet effettivamente presenti nel registry.
-  - Aggiornato `add_legacy_preparation_features()` per riempire colonne derivate gia' presenti ma null/vuote (`mission`, `mileage_range`, range velocita', split mileage).
-  - Aggiunto `cestino/` a `.gitignore`, cosi' gli Excel di contesto non entrano nei commit.
-  - Aggiornati `tests/test_vodr_config.py`, `README.md`, `CLAUDE.md` e `.gitignore`.
-- **Test/verifiche**:
-  - `python -m py_compile vodr_config.py vodr_pipeline.py run_local_sample.py`: ok.
-  - `python -m py_compile engine_cleaning.py vodr_config.py vodr_pipeline.py run_local_sample.py`: ok.
-  - Validazione JSON `Main_pipeline_Vodr.ipynb`: ok.
-  - `python -m pytest tests/test_vodr_config.py`: 7 passed.
-  - `python -m pytest tests/`: 21 passed.
-  - Analisi workbook `cestino/VODR_56_new_thresholds_19_06.xlsx`: 35 sheet totali, 22 placeholder; `Complete Dataset` contiene 109/110 variabili allegato, manca `Soh90ON`; `mission` e `mileage_range` erano vuoti su 461/461 righe.
-  - Tentativo di test Spark locale su `engine_cleaning.py` rimosso per timeout ambiente Windows; non lasciarlo nella suite.
-- **Prossimi passi**:
-  - Su Databricks rilanciare `Main_pipeline_Vodr.ipynb` con widget `config=56`.
-  - Controllare dai log eventuali righe `VODR <sheet> mancante: <colonna>` per capire se la fat table 56 ha nomi colonna diversi dal catalogo cliente.
-  - Se qualche sheet resta placeholder, verificare soprattutto presenza di `product_series/product_model/power/mission/mileage_range` e delle variabili elencate nell'allegato.
-
 ### 2026-06-17 - Codex - branch `main`
 
 - **Obiettivo**: allineare nomi sheet Excel e nomi variabili Mission Test alla tabella cliente `Table Name / Item Name / Variable Name`.
