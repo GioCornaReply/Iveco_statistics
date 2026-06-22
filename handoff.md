@@ -10,6 +10,55 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-06-22 - Claude (Opus 4.7) - branch `main`
+
+- **Obiettivo**: rilettura del repository per riallineare i file MD allo stato del codice dopo il revert del 2026-06-19.
+- **Contesto letto**: `CLAUDE.md`, `handoff.md`, `git status`, `git log --oneline -20`, `engine_loader.py`, `vodr_config.py`, `vodr_pipeline.py`, `run_local_sample.py`, `engine_config.py`, `README.md`, `tests/`, diff dei commit `7c46539`/`bb86fea`/`5cb1e64`.
+- **Stato osservato**:
+  - VODR config `56` resta **routata su Unity Catalog** (`engine_loader.VODR_STATISTICS_CONFIGS` e `vodr_config.VODR_STATISTICS_CONFIGS` la includono; test `test_vodr_statistics_configs_use_unity_catalog_tables` la asserisce).
+  - Il commit "Fix VODR config 56 report sheets" (catalogo sheet dedicato + riempimento colonne null in `add_legacy_preparation_features` + preview dinamica notebook + voce handoff del 2026-06-19) e' stato revertato in `5cb1e64`; quindi VODR 56 usa di nuovo gli sheet legacy `get_vodr_report_sheets()`.
+  - `cestino/VODR_56_new_thresholds_19_06.xlsx` resta presente non tracciato (la regola `cestino/` in `.gitignore` e' stata rimossa dal revert: usare con cautela, non aggiungere a Git).
+  - `CLAUDE.md` elencava ancora solo `33,49,50,51,52,53,54` come VODR Unity Catalog: disallineato con il codice. Corretto a includere `56`.
+- **Azioni fatte**:
+  - Aggiornato `CLAUDE.md`: lista VODR Unity Catalog include `56`; aggiunto pitfall su VODR 56 (catalogo sheet legacy, niente reintroduzione del catalogo dedicato senza accordo cliente) e nota su `cestino/` non tracciato.
+  - Aggiunta questa voce in `handoff.md` per ricostruire le sessioni mancanti dal 2026-06-17 in poi.
+- **Test/verifiche**:
+  - Nessun test eseguito in questa sessione: solo letture e aggiornamento documentazione.
+- **Prossimi passi**:
+  - Se la pipeline VODR 56 produce ancora sheet vuoti su Databricks, riaprire la discussione con il cliente prima di reintrodurre `VODR_56_REPORT_SHEETS`: il revert del 2026-06-19 indica che la fix precedente non era quella attesa.
+  - Quando si riprende il lavoro su 56, ripartire dai diff `bb86fea`/`5cb1e64` per capire cosa era stato proposto e perche' e' stato annullato.
+
+### 2026-06-19 - Codex - branch `main` - REVERTATO
+
+- **Nota**: la sessione del 2026-06-19 ("Fix VODR config 56 report sheets") e' stata revertata interamente in `5cb1e64`. Il diff originale resta consultabile come `git show bb86fea`. Il revert ha tolto: `VODR_56_PERCENTAGE_GROUPS` / `VODR_56_REPORT_SHEETS`, il riempimento di colonne null in `add_legacy_preparation_features()`, le modifiche a `Main_pipeline_Vodr.ipynb` per preview dinamiche, la regola `.gitignore` per `cestino/`, i test dedicati e le note README/CLAUDE/handoff.
+- **Lezione**: la fix proposta per VODR 56 non era allineata con quanto richiesto dal cliente; non riproporre senza nuovo input.
+
+### 2026-06-18 - Codex - branch `main`
+
+- **Obiettivo**: estendere routing VODR a config `56` e usare metadati di config invece di leggere righe per nome file.
+- **Commit principali**: `4a0cf55` (skip heavy fat table diagnostics), `8808023` (use config metadata for fat tables), `7c46539` (route VODR 56 to Unity Catalog).
+- **Azioni fatte**:
+  - Aggiunta `56` a `VODR_STATISTICS_CONFIGS` in `engine_loader.py` e `vodr_config.py`.
+  - Aggiornato test `test_vodr_statistics_configs_use_unity_catalog_tables` per coprire 56.
+  - Introdotto `CONFIG_METADATA` e `get_metadata_for_config()` in `engine_loader.py`: il nome export Mission Test ora si risolve senza eseguire `df.select().first()` quando i metadata sono noti (399, 405, 406, 408).
+  - Aggiornati `Main_pipeline_modular.ipynb` e `run_local_sample.py` per saltare diagnostiche pesanti sulla fat table quando non servono.
+  - Aggiornato `tests/test_config_405_406.py` con asserzioni su `get_metadata_for_config`.
+- **Test/verifiche**:
+  - Test inclusi nei commit; suite `tests/` mantenuta verde a livello di commit.
+- **Prossimi passi**:
+  - Verificare su Databricks che VODR 56 legga correttamente da `u_truck_analyzer_p.vodr_statistics.fat_table_56`.
+  - Confermare che i nomi file Mission Test su Databricks rispettino la mappa `CONFIG_METADATA` anche per future config.
+
+### 2026-06-18 - Codex - branch `main`
+
+- **Obiettivo**: piccoli fix UX nel notebook modulare Mission Test.
+- **Commit principali**: `361e671` (fix turbocharger zero reporting), `8555021` (fix modular notebook 4g/4h/4i previews).
+- **Azioni fatte**:
+  - Lo sheet `turbocharger_revolutions` ora preserva gli zeri per `Turbochargerrevolutions_130000` (`zero_as_null_exclude`), perche' il valore zero ha significato di business per quella colonna.
+  - Le preview di `4g/4h/4i` nel notebook sono allineate al fatto che ora le tre tabelle sono percentuali, non secondi.
+- **Test/verifiche**:
+  - Test `test_turbocharger_130000_keeps_zero_values` aggiunto in `tests/test_config_405_406.py`.
+
 ### 2026-06-17 - Codex - branch `main`
 
 - **Obiettivo**: allineare nomi sheet Excel e nomi variabili Mission Test alla tabella cliente `Table Name / Item Name / Variable Name`.

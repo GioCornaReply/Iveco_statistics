@@ -22,7 +22,7 @@
 - Le liste hardcoded di sheet/colonne devono stare in `engine_config.py` o `vodr_config.py`, non nei notebook.
 - `get_table_path()` centralizza il routing delle config verso Unity Catalog o tabelle legacy.
 - Per Mission Test nuove config `399,400,401,402,405,406,408` si usa `u_truck_analyzer_p.mission_test_statistics.fat_table_<config>`.
-- Per VODR config `33,49,50,51,52,53,54` si usa `u_truck_analyzer_p.vodr_statistics.fat_table_<config>`.
+- Per VODR config `33,49,50,51,52,53,54,56` si usa `u_truck_analyzer_p.vodr_statistics.fat_table_<config>`.
 - Il fallback legacy resta presente per config vecchie, ma va trattato con cautela.
 - La priorita' per le colonne Mission Test e' Series > Group > fallback generico.
 - VODR puo' arricchire con Mission Test tramite join su `vin`; in locale normalmente si lavora su sample.
@@ -58,6 +58,8 @@
 - Evitare import obbligatori di helper appena aggiunti nella prima cella notebook: usare lazy import/fallback se Databricks puo' avere moduli cacheati.
 - Non lavorare direttamente su branch principale se la modifica e' ampia; creare un branch dedicato.
 - Prima di cambiare mapping legacy, verificare i test e, se possibile, confrontare con `Old_statistics/`.
+- VODR config `56` ha fat table su Unity Catalog ma usa il catalogo sheet **legacy** (`get_vodr_report_sheets()`): un tentativo di catalogo dedicato (`VODR_56_REPORT_SHEETS`) e' stato revertato il 2026-06-19; non reintrodurlo senza riallineare prima con il cliente.
+- La cartella locale `cestino/` (non tracciata) puo' contenere Excel di riferimento condivisi dal cliente; non committarla.
 
 ## Comandi Utili
 
