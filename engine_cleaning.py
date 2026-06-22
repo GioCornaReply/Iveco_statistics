@@ -70,39 +70,36 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
     if "Average_vehicle_speed" in df.columns:
         speed = F.col("Average_vehicle_speed").cast("double")
 
-        if "Average_vehicle_speed_range" not in df.columns:
-            df = df.withColumn(
-                "Average_vehicle_speed_range",
-                F.when(speed < 10, "<10 km/h")
-                .when((speed >= 10) & (speed < 20), "10-20 km/h")
-                .when((speed >= 20) & (speed < 30), "20-30 km/h")
-                .when((speed >= 30) & (speed < 40), "30-40 km/h")
-                .when((speed >= 40) & (speed < 50), "40-50 km/h")
-                .when((speed >= 50) & (speed < 60), "50-60 km/h")
-                .when((speed >= 60) & (speed < 70), "60-70 km/h")
-                .when((speed >= 70) & (speed < 80), "70-80 km/h")
-                .when(speed >= 80, ">80 km/h"),
-            )
+        speed_range_expr = (
+            F.when(speed < 10, "<10 km/h")
+            .when((speed >= 10) & (speed < 20), "10-20 km/h")
+            .when((speed >= 20) & (speed < 30), "20-30 km/h")
+            .when((speed >= 30) & (speed < 40), "30-40 km/h")
+            .when((speed >= 40) & (speed < 50), "40-50 km/h")
+            .when((speed >= 50) & (speed < 60), "50-60 km/h")
+            .when((speed >= 60) & (speed < 70), "60-70 km/h")
+            .when((speed >= 70) & (speed < 80), "70-80 km/h")
+            .when(speed >= 80, ">80 km/h")
+        )
+        df = _fill_derived_column(df, "Average_vehicle_speed_range", speed_range_expr)
 
-        if "Average_vehicle_speed_split" not in df.columns:
-            df = df.withColumn(
-                "Average_vehicle_speed_split",
-                F.when(speed < 20, "<20 km/h")
-                .when((speed >= 20) & (speed < 40), "20-40 km/h")
-                .when(speed >= 40, ">40 km/h"),
-            )
+        speed_split_expr = (
+            F.when(speed < 20, "<20 km/h")
+            .when((speed >= 20) & (speed < 40), "20-40 km/h")
+            .when(speed >= 40, ">40 km/h")
+        )
+        df = _fill_derived_column(df, "Average_vehicle_speed_split", speed_split_expr)
 
-        if "mission" not in df.columns:
-            df = df.withColumn(
-                "mission",
-                F.when(speed < 20, "<20 km/h HEAVY URBAN")
-                .when((speed >= 20) & (speed < 40), "20 - 40 km/h URBAN")
-                .when(
-                    (speed >= 40) & (speed < 50),
-                    "40 - 50 km/h MIX URBAN/ MEDIUM HIGHWAY",
-                )
-                .when(speed >= 50, ">50 km/h HIGHWAY"),
+        mission_expr = (
+            F.when(speed < 20, "<20 km/h HEAVY URBAN")
+            .when((speed >= 20) & (speed < 40), "20 - 40 km/h URBAN")
+            .when(
+                (speed >= 40) & (speed < 50),
+                "40 - 50 km/h MIX URBAN/ MEDIUM HIGHWAY",
             )
+            .when(speed >= 50, ">50 km/h HIGHWAY")
+        )
+        df = _fill_derived_column(df, "mission", mission_expr)
 
     mileage_col = None
     if "mileage" in df.columns:
@@ -113,30 +110,41 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
     if mileage_col:
         mileage = F.col(mileage_col).cast("double")
 
-        if "mileage_range" not in df.columns:
-            df = df.withColumn(
-                "mileage_range",
-                F.when(mileage < 10000, "<10k km")
-                .when((mileage >= 10000) & (mileage < 100000), "10k-100k km")
-                .when((mileage >= 100000) & (mileage < 200000), "100k-200k km")
-                .when((mileage >= 200000) & (mileage < 300000), "200k-300k km")
-                .when((mileage >= 300000) & (mileage < 400000), "300k-400k km")
-                .when((mileage >= 400000) & (mileage < 500000), "400k-500k km")
-                .when((mileage >= 500000) & (mileage < 600000), "500k-600k km")
-                .when((mileage >= 600000) & (mileage < 700000), "600k-700k km")
-                .when((mileage >= 700000) & (mileage < 800000), "700k-800k km")
-                .when((mileage >= 800000) & (mileage < 900000), "800k-900k km")
-                .when((mileage >= 900000) & (mileage < 1000000), "900k-1000k km")
-                .when(mileage >= 1000000, ">1000k km"),
-            )
+        mileage_range_expr = (
+            F.when(mileage < 10000, "<10k km")
+            .when((mileage >= 10000) & (mileage < 100000), "10k-100k km")
+            .when((mileage >= 100000) & (mileage < 200000), "100k-200k km")
+            .when((mileage >= 200000) & (mileage < 300000), "200k-300k km")
+            .when((mileage >= 300000) & (mileage < 400000), "300k-400k km")
+            .when((mileage >= 400000) & (mileage < 500000), "400k-500k km")
+            .when((mileage >= 500000) & (mileage < 600000), "500k-600k km")
+            .when((mileage >= 600000) & (mileage < 700000), "600k-700k km")
+            .when((mileage >= 700000) & (mileage < 800000), "700k-800k km")
+            .when((mileage >= 800000) & (mileage < 900000), "800k-900k km")
+            .when((mileage >= 900000) & (mileage < 1000000), "900k-1000k km")
+            .when(mileage >= 1000000, ">1000k km")
+        )
+        df = _fill_derived_column(df, "mileage_range", mileage_range_expr)
 
-        if "mileage_split" not in df.columns:
-            df = df.withColumn(
-                "mileage_split",
-                F.when(mileage < 10000, "<10k km").when(mileage >= 10000, "over 10k km"),
-            )
+        mileage_split_expr = F.when(mileage < 10000, "<10k km").when(
+            mileage >= 10000, "over 10k km"
+        )
+        df = _fill_derived_column(df, "mileage_split", mileage_split_expr)
 
     return df
+
+
+def _fill_derived_column(df: DataFrame, col_name: str, expr) -> DataFrame:
+    """Crea la colonna se manca, oppure rimpiazza solo i NULL con il valore derivato.
+
+    Necessario per VODR: nella fat table colonne come `mission` o `mileage_range`
+    possono esistere come schema ma essere completamente NULL; senza coalesce
+    la versione 'colonna esiste' non veniva ricalcolata e gli sheet pivot per
+    `mission`/`mileage_range` risultavano vuoti.
+    """
+    if col_name not in df.columns:
+        return df.withColumn(col_name, expr)
+    return df.withColumn(col_name, F.coalesce(F.col(col_name), expr))
 
 # --- NORMALIZZAZIONE MODELLI MOTORE ---
 

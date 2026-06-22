@@ -49,3 +49,22 @@ def test_vodr_report_config_uses_generated_percentage_columns():
 def test_vodr_export_file_name_is_stable():
     assert get_vodr_export_file_name({52}) == "VODR_52_new_thresholds.xlsx"
     assert get_vodr_export_file_name({50, 51}) == "VODR_50_51_new_thresholds.xlsx"
+
+
+def test_vodr_time_in_semi_uses_official_column_names():
+    sheets = {sheet["sheet_id"]: sheet for sheet in get_vodr_report_sheets({56})}
+    assert sheets["time_in_semi"]["columns"] == [
+        "TimeInSemiWithEngineRunning",
+        "TimeInAutoSuspendWithEngineRunning",
+        "TimeInAutoWithEngineRunning",
+    ]
+
+
+def test_vodr_5c_battery_soh_includes_soh90on():
+    from vodr_config import VODR_PERCENTAGE_GROUPS
+
+    assert "Soh90ON" in VODR_PERCENTAGE_GROUPS["5c"]
+    sheets = {sheet["sheet_id"]: sheet for sheet in get_vodr_report_sheets({56})}
+    sheet_5c = sheets["5c"]
+    assert "Soh90ON" in sheet_5c["columns"]
+    assert len(sheet_5c["triggers"]) == len(sheet_5c["columns"])
