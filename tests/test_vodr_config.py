@@ -20,6 +20,7 @@ def test_vodr_statistics_configs_use_unity_catalog_tables():
 def test_vodr_to_mission_test_mapping_keeps_legacy_groups():
     assert config_mt_from_vodr({5, 19}) == {260, 288, 300, 301, 335, 336}
     assert config_mt_from_vodr({20, 21}) == {286, 287, 302, 303, 335, 336}
+    assert config_mt_from_vodr({56}) == {408}
     assert config_mt_from_vodr({52}) == DEFAULT_VODR_MT_CONFIGS
 
 

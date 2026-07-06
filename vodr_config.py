@@ -71,6 +71,7 @@ VODR_TO_MT_CONFIGS = {
     frozenset({32}): {367},
     frozenset({35, 36}): {368, 371},
     frozenset({37, 38}): {372, 373},
+    frozenset({56}): {408},
     frozenset({25, 26, 27, 28}): {
         307,
         310,
