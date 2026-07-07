@@ -479,8 +479,13 @@ def copy_excel_to_dbfs(
         except Exception:
             workspace_url = None
         if workspace_url:
+            file_store_prefix = "dbfs:/FileStore/"
+            if dbfs_output_dir.startswith(file_store_prefix):
+                file_url_dir = dbfs_output_dir[len(file_store_prefix) :]
+            else:
+                file_url_dir = "iveco_statistics_output"
             download_url = (
-                f"https://{workspace_url}/files/iveco_statistics_output/"
+                f"https://{workspace_url}/files/{file_url_dir}/"
                 f"{local_excel_path.name}"
             )
             print(f"Download: {download_url}")

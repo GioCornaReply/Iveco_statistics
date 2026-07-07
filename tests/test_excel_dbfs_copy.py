@@ -50,6 +50,31 @@ def test_copy_excel_to_dbfs_uses_generated_file_name(tmp_path):
     )
 
 
+def test_copy_excel_to_dbfs_builds_download_url_from_custom_filestore_dir(tmp_path):
+    excel_path = tmp_path / "VODR_subset_56.xlsx"
+    excel_path.write_bytes(b"excel")
+    dbutils = FakeDbutils()
+
+    result = copy_excel_to_dbfs(
+        excel_path,
+        dbutils,
+        spark=FakeSpark(),
+        dbfs_output_dir="dbfs:/FileStore/iveco_vodr_subset_output",
+    )
+
+    assert dbutils.fs.mkdirs_calls == ["dbfs:/FileStore/iveco_vodr_subset_output"]
+    assert dbutils.fs.cp_calls == [
+        (
+            f"file:{excel_path.resolve().as_posix()}",
+            "dbfs:/FileStore/iveco_vodr_subset_output/VODR_subset_56.xlsx",
+            True,
+        )
+    ]
+    assert result["download_url"].endswith(
+        "/files/iveco_vodr_subset_output/VODR_subset_56.xlsx"
+    )
+
+
 def test_copy_excel_to_dbfs_rejects_missing_file(tmp_path):
     dbutils = FakeDbutils()
     missing = tmp_path / "missing.xlsx"
