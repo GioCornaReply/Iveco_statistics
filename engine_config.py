@@ -275,7 +275,7 @@ REPORT_SHEET_CONFIG = {
         "name": "Average Vehicle Speed",
         "use_percentage_columns": False,
         "columns": ["Average_vehicle_speed"],
-        "group_by": ["mileage_range"],
+        "group_by": ["Average_vehicle_speed_split"],
         "trigger": 0,
         "zero_as_null": True,
     },

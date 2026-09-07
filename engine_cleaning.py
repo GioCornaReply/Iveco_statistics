@@ -59,6 +59,72 @@ def keep_latest_record_per_vin(
     )
 
 
+def apply_statistics_quality_filters(df: DataFrame, max_data_age_days: int = 366) -> DataFrame:
+    """Applica le regole di qualita' legacy prima delle statistiche.
+
+    Le metriche fuori soglia diventano NULL, cosi' non pesano su media/deviazione
+    standard. I record senza mileage, engine-hours o timestamp validi vengono
+    esclusi quando la rispettiva sorgente e' disponibile nel dataset.
+    """
+    df = _coalesce_legacy_statistics_columns(df)
+
+    metric_ranges = {
+        "average_fuel_consumption_kml": (0.1, 6.0),
+        "Average_vehicle_speed": (0.1, 80.0),
+        "AdBlue_consumption_percentage": (0.1, 100.0),
+        "AdBlue_consumption_l100km": (0.1, 9.0),
+        "Average_start": (0.1, 1000.0),
+    }
+    for column, (lower_bound, upper_bound) in metric_ranges.items():
+        if column in df.columns:
+            value = F.col(column).cast("double")
+            df = df.withColumn(
+                column,
+                F.when(value.between(lower_bound, upper_bound), value),
+            )
+
+    if "crank_100km" in df.columns:
+        value = F.col("crank_100km").cast("double")
+        df = df.withColumn("crank_100km", F.when(value > 0.1, value))
+
+    if "enginehours" in df.columns:
+        value = F.col("enginehours").cast("double")
+        df = df.withColumn("enginehours", F.when(value > 1, value)).filter(
+            F.col("enginehours").isNotNull()
+        )
+
+    if "mileage" in df.columns:
+        mileage = F.col("mileage").cast("double")
+        df = df.withColumn("mileage", F.when(mileage > 1000, mileage)).filter(
+            F.col("mileage").isNotNull()
+        )
+
+    if "udt_timestamp" in df.columns:
+        timestamp = F.col("udt_timestamp").cast("timestamp")
+        df = df.withColumn("udt_timestamp", timestamp).filter(
+            timestamp.isNotNull()
+            & (F.datediff(F.current_date(), timestamp) < max_data_age_days)
+        )
+
+    return df
+
+
+def _coalesce_legacy_statistics_columns(df: DataFrame) -> DataFrame:
+    """Espone le colonne canoniche senza perdere le varianti originali."""
+    variants = {
+        "enginehours": ("enginehours", "TotEngineHours", "tot_eng_hours"),
+        "mileage": ("mileage", "cov_div_len"),
+        "udt_timestamp": ("udt_timestamp", "easy_timestamp", "utc_datetime"),
+        "crank_100km": ("crank_100km", "avgcrank_100km"),
+    }
+    for canonical, candidates in variants.items():
+        present = [column for column in candidates if column in df.columns]
+        if not present:
+            continue
+        df = df.withColumn(canonical, F.coalesce(*[F.col(column) for column in present]))
+    return df
+
+
 def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
     """Ricrea localmente alcune colonne prodotte dal vecchio notebook Prep."""
     if "product_model" in df.columns:
@@ -121,10 +187,15 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
             .when((mileage >= 600000) & (mileage < 700000), "600k-700k km")
             .when((mileage >= 700000) & (mileage < 800000), "700k-800k km")
             .when((mileage >= 800000) & (mileage < 900000), "800k-900k km")
-            .when((mileage >= 900000) & (mileage < 1000000), "900k-1000k km")
-            .when(mileage >= 1000000, ">1000k km")
+            .when((mileage >= 900000) & (mileage < 1000000), "900k-1M km")
+            .when(mileage >= 1000000, ">1M km")
         )
-        df = _fill_derived_column(df, "mileage_range", mileage_range_expr)
+        df = _fill_derived_column(
+            df,
+            "mileage_range",
+            mileage_range_expr,
+            replace_values=("900k-1000k km", ">1000k km"),
+        )
 
         mileage_split_expr = F.when(mileage < 10000, "<10k km").when(
             mileage >= 10000, "over 10k km"
@@ -134,7 +205,7 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
     return df
 
 
-def _fill_derived_column(df: DataFrame, col_name: str, expr) -> DataFrame:
+def _fill_derived_column(df: DataFrame, col_name: str, expr, replace_values=()) -> DataFrame:
     """Crea la colonna se manca, oppure rimpiazza solo i NULL con il valore derivato.
 
     Necessario per VODR: nella fat table colonne come `mission` o `mileage_range`
@@ -144,7 +215,11 @@ def _fill_derived_column(df: DataFrame, col_name: str, expr) -> DataFrame:
     """
     if col_name not in df.columns:
         return df.withColumn(col_name, expr)
-    return df.withColumn(col_name, F.coalesce(F.col(col_name), expr))
+
+    current = F.col(col_name)
+    if replace_values:
+        current = F.when(current.isin(*replace_values), expr).otherwise(current)
+    return df.withColumn(col_name, F.coalesce(current, expr))
 
 # --- NORMALIZZAZIONE MODELLI MOTORE ---
 

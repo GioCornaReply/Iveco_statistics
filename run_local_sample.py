@@ -18,6 +18,7 @@ import pyspark.sql.functions as F
 
 from engine_cleaning import (
     add_legacy_preparation_features,
+    apply_statistics_quality_filters,
     clean_spark_column_names,
     keep_latest_record_per_vin,
 )
@@ -44,6 +45,7 @@ DEFAULT_SHEETS = get_default_sheet_ids()
 DEFAULT_OUTPUT_DIR = "Excel_statistics"
 DEFAULT_INPUT_MODE = "sample"
 DEFAULT_CONFIG = {399}
+DEFAULT_KEEP_LATEST_PER_VIN = True
 INVALID_EXCEL_SHEET_CHARS = str.maketrans({char: "-" for char in "[]:*?/\\"})
 DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
 DEFAULT_HADOOP_HOME = r"C:\hadoop"
@@ -76,8 +78,8 @@ MILEAGE_RANGE_ORDER = [
     "600k-700k km",
     "700k-800k km",
     "800k-900k km",
-    "900k-1000k km",
-    ">1000k km",
+    "900k-1M km",
+    ">1M km",
 ]
 MILEAGE_SPLIT_ORDER = ["<10k km", "over 10k km"]
 REPORT_SORT_ORDERS = {
@@ -556,7 +558,7 @@ def run_local_sample(
     sheet_ids,
     output_dir,
     export_excel,
-    keep_latest_per_vin,
+    keep_latest_per_vin=DEFAULT_KEEP_LATEST_PER_VIN,
     input_mode=DEFAULT_INPUT_MODE,
     config=DEFAULT_CONFIG,
 ):
@@ -590,6 +592,11 @@ def run_local_sample(
                 report_vin(df_clean)
             else:
                 log_step("Deduplica VIN applicata; count automatico saltato su fat_table")
+
+        log_step("Applicazione filtri qualita' Statistics")
+        df_clean = apply_statistics_quality_filters(df_clean)
+        if input_mode == "sample":
+            report_dim(df_clean, "QUALITY FILTERED sample")
 
         log_step("Arricchimento colonne legacy Prep")
         df_clean = add_legacy_preparation_features(df_clean)
