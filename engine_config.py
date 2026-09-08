@@ -79,6 +79,8 @@ DEFAULT_REPORT_SHEETS = [
 ]
 
 VARIABLE_DISPLAY_NAMES = {
+    "engineoverspeed_pct": "Engine overspeed [%]",
+    "crank_100km_pct": "Average crank per 100 km [%]",
     "tor_rev_cutoff": "Cut off with gear engaged (250-2500 rpm / -15 - 0 %)",
     "tor_rev_low": "Low Load (250-2500 rpm / 0-15%)",
     "tor_rev_lowlow": "Low Load, low engine speed, high specific fuel consumption (250-650 rpm / 15-45 %)",
@@ -314,25 +316,23 @@ REPORT_SHEET_CONFIG = {
     "average_crank_per_100km": {
         "name": "Average crank per 100km",
         "use_percentage_columns": False,
-        "columns": ["crank_100km"],
+        "columns": ["crank_100km_pct"],
         "group_by": ["product_model"],
         "trigger": 1,
-        "scale": 0.1,
         "zero_as_null": True,
     },
     "average_crank_per_100km_2": {
         "name": "Average crank per 100km 2",
         "use_percentage_columns": False,
-        "columns": ["crank_100km"],
+        "columns": ["crank_100km_pct"],
         "group_by": ["product_group"],
         "trigger": 1,
-        "scale": 0.1,
         "zero_as_null": True,
     },
     "engine_over_speed": {
         "name": "Engine over speed",
         "use_percentage_columns": False,
-        "columns": ["engineoverspeed", "vehicleoverspeed"],
+        "columns": ["engineoverspeed_pct", "vehicleoverspeed"],
         "group_by": ["product_group"],
         "trigger": 1,
         "zero_as_null": True,
@@ -340,7 +340,7 @@ REPORT_SHEET_CONFIG = {
     "engine_over_speed_2": {
         "name": "Engine over speed 2",
         "use_percentage_columns": False,
-        "columns": ["engineoverspeed", "vehicleoverspeed"],
+        "columns": ["engineoverspeed_pct", "vehicleoverspeed"],
         "group_by": ["product_model"],
         "trigger": 1,
         "zero_as_null": True,

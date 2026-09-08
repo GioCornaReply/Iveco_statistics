@@ -33,11 +33,11 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
         today = date.today()
         df = self.spark.createDataFrame(
             [
-                ("valid", 1001.0, None, 2.0, None, today, None, 2.5, 50.0, 1.0),
-                ("fuel-zero", 1001.0, None, 2.0, None, today, None, 0.0, 90.0, 1.0),
-                ("mileage-limit", 1000.0, None, 2.0, None, today, None, 2.5, 50.0, 1.0),
-                ("old", 1001.0, None, 2.0, None, today - timedelta(days=366), None, 2.5, 50.0, 1.0),
-                ("legacy", None, 1001.0, None, 2.0, None, today, 2.5, 50.0, 1.0),
+                ("valid", 1001.0, None, 2.0, None, today, None, 2.5, 50.0, 1.0, 1.0),
+                ("fuel-zero", 1001.0, None, 2.0, None, today, None, 0.0, 90.0, 1.0, 3.0),
+                ("mileage-limit", 1000.0, None, 2.0, None, today, None, 2.5, 50.0, 1.0, 1.0),
+                ("old", 1001.0, None, 2.0, None, today - timedelta(days=366), None, 2.5, 50.0, 1.0, 1.0),
+                ("legacy", None, 1001.0, None, 2.0, None, today, 2.5, 50.0, 1.0, 1.0),
             ],
             [
                 "vin",
@@ -50,6 +50,7 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
                 "average_fuel_consumption_kml",
                 "Average_vehicle_speed",
                 "crank_100km",
+                "engineoverspeed",
             ],
         )
 
@@ -59,6 +60,9 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
         by_vin = {row.vin: row for row in result}
         self.assertIsNone(by_vin["fuel-zero"].average_fuel_consumption_kml)
         self.assertIsNone(by_vin["fuel-zero"].Average_vehicle_speed)
+        self.assertIsNone(by_vin["fuel-zero"].engineoverspeed_pct)
+        self.assertEqual(by_vin["valid"].engineoverspeed_pct, 50.0)
+        self.assertEqual(by_vin["valid"].crank_100km_pct, 50.0)
         self.assertEqual(by_vin["legacy"].mileage, 1001.0)
         self.assertEqual(by_vin["legacy"].enginehours, 2.0)
 

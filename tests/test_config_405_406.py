@@ -15,7 +15,7 @@ import pandas as pd
 
 class Config405406Test(unittest.TestCase):
     def test_new_configs_use_unity_catalog_mission_test_tables(self):
-        for config in (405, 406, 408):
+        for config in (403, 405, 406, 408):
             self.assertEqual(
                 get_table_path(config),
                 f"u_truck_analyzer_p.mission_test_statistics.fat_table_{config}",
@@ -179,6 +179,23 @@ class Config405406Test(unittest.TestCase):
 
         self.assertTrue(settings["zero_as_null"])
         self.assertEqual(settings["zero_as_null_exclude"], ["Turbochargerrevolutions_130000"])
+
+    def test_403_uses_normalized_overspeed_and_crank_metrics(self):
+        self.assertEqual(
+            get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", "engine_over_speed"),
+            ["engineoverspeed_pct", "vehicleoverspeed"],
+        )
+        self.assertEqual(
+            get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", "engine_over_speed_2"),
+            ["engineoverspeed_pct", "vehicleoverspeed"],
+        )
+        for sheet_id in ("average_crank_per_100km", "average_crank_per_100km_2"):
+            settings = get_sheet_settings(sheet_id)
+            self.assertEqual(
+                get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", sheet_id),
+                ["crank_100km_pct"],
+            )
+            self.assertEqual(settings["scale"], 1)
 
     def test_sheet_names_follow_latest_catalog_with_excel_safe_abbreviations(self):
         expected_names = {

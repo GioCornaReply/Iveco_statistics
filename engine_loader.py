@@ -3,6 +3,7 @@ from pyspark.sql.utils import AnalysisException
 
 
 MISSION_TEST_STATISTICS_CONFIGS = {
+    403,
     399,
     400,
     401,

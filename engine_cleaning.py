@@ -83,15 +83,25 @@ def apply_statistics_quality_filters(df: DataFrame, max_data_age_days: int = 366
                 F.when(value.between(lower_bound, upper_bound), value),
             )
 
-    if "crank_100km" in df.columns:
-        value = F.col("crank_100km").cast("double")
-        df = df.withColumn("crank_100km", F.when(value > 0.1, value))
-
     if "enginehours" in df.columns:
         value = F.col("enginehours").cast("double")
         df = df.withColumn("enginehours", F.when(value > 1, value)).filter(
             F.col("enginehours").isNotNull()
         )
+
+    if "enginehours" in df.columns:
+        engine_hours = F.col("enginehours").cast("double")
+        for source_column, target_column in (
+            ("engineoverspeed", "engineoverspeed_pct"),
+            ("crank_100km", "crank_100km_pct"),
+        ):
+            if source_column not in df.columns:
+                continue
+            percentage = F.col(source_column).cast("double") * F.lit(100.0) / engine_hours
+            df = df.withColumn(
+                target_column,
+                F.when((percentage > 0) & (percentage < 101), F.round(percentage, 2)),
+            )
 
     if "mileage" in df.columns:
         mileage = F.col("mileage").cast("double")
