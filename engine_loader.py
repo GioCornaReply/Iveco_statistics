@@ -14,6 +14,7 @@ MISSION_TEST_STATISTICS_CONFIGS = {
 }
 
 CONFIG_METADATA = {
+    403: ("MISSION_TEST", "IVECO_S_X_WAY_NP", "S_WAY_NP_MY_2024"),
     399: ("MISSION_TEST", "IVECO_S_WAY", "S_WAY_AT_AD_MY_2024"),
     405: ("MISSION_TEST", "IVECO_X_WAY", "X_WAY_AT_AD_MY_2024"),
     406: ("MISSION_TEST", "IVECO_T_WAY", "T_WAY_MY_2024"),
@@ -91,6 +92,7 @@ def get_export_file_name(product_group, config):
     mapping = {
         "EUROCARGO": "EUROCARGO",
         "IVECO_S_WAY": "HEAVY_SWAY",
+        "IVECO_S_X_WAY_NP": "HEAVY_SWAY_NP",
         "IVECO_X_WAY": "HEAVY_XWAY",
         "IVECO_T_WAY": "HEAVY_TWAY",
     }

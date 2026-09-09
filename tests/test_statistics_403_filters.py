@@ -3,14 +3,19 @@ from datetime import date, timedelta
 from pathlib import Path
 import unittest
 
+import pandas as pd
 from pyspark.sql import SparkSession
 
-from engine_cleaning import apply_statistics_quality_filters
+from engine_cleaning import add_np_403_calculated_features, apply_statistics_quality_filters
 from engine_config import get_sheet_settings
 from run_local_sample import (
     DEFAULT_KEEP_LATEST_PER_VIN,
     MILEAGE_RANGE_ORDER,
+    build_sheet_pivot,
+    build_sheet_outputs,
     configure_local_spark_environment,
+    format_seconds_as_hhmmss,
+    validate_config_columns,
 )
 
 
@@ -65,6 +70,170 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
         self.assertEqual(by_vin["valid"].crank_100km_pct, 50.0)
         self.assertEqual(by_vin["legacy"].mileage, 1001.0)
         self.assertEqual(by_vin["legacy"].enginehours, 2.0)
+
+    def test_np_timer_columns_are_normalized_from_clock_and_numeric_values(self):
+        df = self.spark.createDataFrame(
+            [
+                (
+                    "12.5",
+                    "01:02:03",
+                    "00:02:00",
+                    "00:03:00",
+                    "25:00:00",
+                    "30",
+                    "00:10:00",
+                    "00:20:00",
+                    "4",
+                    "5",
+                    "6",
+                    "7",
+                    "8",
+                )
+            ],
+            [
+                "Engine_on_time",
+                "Engine_overspeed_2600_rpm_Timer",
+                "Post_Catalyst_temperature_860_timer",
+                "Cat_Eff_Timer",
+                "Coolant_temperature_high_104_timer",
+                "High_oil_temperature_120_timer",
+                "High_boost_pressure_timer",
+                "Low_ambient_pressure_timer",
+                "Cat_Eff_Counter",
+                "Coolant_temperature_high_104_counter",
+                "High_oil_temperature_120_counter",
+                "High_boost_pressure_counter",
+                "Low_ambient_pressure_counter",
+            ],
+        )
+
+        row = add_np_403_calculated_features(df).first()
+
+        self.assertEqual(row.Engine_on_time, 12.5)
+        self.assertEqual(row.Engine_overspeed_2600_rpm_seconds, 3723.0)
+        self.assertEqual(row.Post_Catalyst_temperature_860_minutes, 2.0)
+        self.assertEqual(row.Cat_Eff_minutes, 3.0)
+        self.assertEqual(row.Coolant_temperature_high_104_seconds, 90000.0)
+        self.assertEqual(row.High_oil_temperature_120_seconds, 30.0)
+        self.assertEqual(row.High_boost_pressure_counter, 7.0)
+
+    def test_np_vehicle_speed_excludes_over_40_band(self):
+        df = self.spark.createDataFrame(
+            [
+                ("<20 km/h", 10.0),
+                ("20-40 km/h", 30.0),
+                (">40 km/h", 50.0),
+            ],
+            ["Average_vehicle_speed_split", "Average_vehicle_speed"],
+        )
+        validation = {
+            "present": ["Average_vehicle_speed"],
+            "sheet_name": "Average Vehicle Speed",
+        }
+
+        result, _ = build_sheet_pivot(df, "np_average_vehicle_speed", validation)
+
+        self.assertEqual(set(result["Average_vehicle_speed_split"]), {"<20 km/h", "20-40 km/h"})
+
+    def test_fuel_sheet_leaves_statistics_blank_when_all_values_are_zero(self):
+        df = self.spark.createDataFrame(
+            [("NP", "340C9G", "5.29", ">50 km/h HIGHWAY", 0.0)],
+            ["product_model", "power", "axle_description", "mission", "average_fuel_consumption_kml"],
+        )
+        validation = {
+            "present": ["average_fuel_consumption_kml"],
+            "sheet_name": "Fuel Consumption",
+        }
+
+        result, _ = build_sheet_pivot(df, "fuel_consumption", validation)
+        row = result.iloc[0]
+
+        self.assertTrue(pd.isna(row["average_fuel_consumption_kml"]))
+        self.assertTrue(pd.isna(row["StdDev_average_fuel_consumption_kml"]))
+        self.assertTrue(pd.isna(row["Advice_average_fuel_consumption_kml"]))
+        self.assertTrue(pd.isna(row["Alert_average_fuel_consumption_kml"]))
+        self.assertEqual(row["Count_average_fuel_consumption_kml"], 0)
+
+    def test_duration_formatter_keeps_hours_above_24(self):
+        self.assertEqual(format_seconds_as_hhmmss(90061), "25:01:01")
+
+    def test_np_profile_builds_every_requested_sheet(self):
+        sheet_ids = [
+            "fuel_consumption",
+            "np_average_vehicle_speed",
+            "np_engine_lifecycle",
+            "np_engine_overspeed",
+            "np_catalyst_temperature",
+            "np_low_catalyst_efficiency",
+            "np_coolant_temperature_high",
+            "np_oil_temperature_high",
+            "np_boost_pressure_high",
+            "np_ambient_pressure_low",
+            "np_2a",
+            "np_2b",
+            "np_2c",
+            "np_3a",
+            "np_3c",
+            "np_3f",
+            "np_3g",
+            "np_4d",
+            "np_5c",
+        ]
+        values = {
+            "product_model": "C S-Way NP",
+            "power": "340C9G",
+            "axle_description": "5.29",
+            "mission": "20 - 40 km/h URBAN",
+            "engine_model": "Cursor 9",
+            "Average_vehicle_speed_split": "20-40 km/h",
+            "Average_vehicle_speed": 30.0,
+            "average_fuel_consumption_kml": 0.0,
+            "Engine_on_time": "10",
+            "Engine_overspeed_2600_rpm_Timer": "00:00:30",
+            "Post_Catalyst_temperature_860_timer": "00:02:00",
+            "Cat_Eff_Timer": "00:03:00",
+            "Cat_Eff_Counter": "2",
+            "Coolant_temperature_high_104_timer": "00:04:00",
+            "Coolant_temperature_high_104_counter": "3",
+            "High_oil_temperature_120_timer": "00:05:00",
+            "High_oil_temperature_120_counter": "4",
+            "High_boost_pressure_timer": "00:06:00",
+            "High_boost_pressure_counter": "5",
+            "Low_ambient_pressure_timer": "00:07:00",
+            "Low_ambient_pressure_counter": "6",
+        }
+        for column_name in (
+            "region1_coolantT", "region2_coolantT",
+            "oiltemp1", "oiltemp2", "oiltemp3",
+            "reg1_Intake_Temp", "reg2_Intake_Temp", "reg3_Intake_Temp",
+            "fueltemp1", "fueltemp2", "fueltemp3",
+            "reg1_gas_railpressure", "reg2_gas_railpressure", "reg3_gas_railpressure",
+            "reg1_Mixture_selfpoor", "reg2_Mixture_selfpoor", "reg3_Mixture_selfpoor",
+            "reg1_Mixture_selfrich", "reg2_Mixture_selfrich", "reg3_Mixture_selfrich",
+            "reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff",
+            "reg1_Intake_manifoldpressure", "reg2_Intake_manifoldpressure",
+            "reg3_Intake_manifoldpressure",
+        ):
+            values[column_name] = 1.0
+
+        df = self.spark.createDataFrame([tuple(values.values())], list(values))
+        df = add_np_403_calculated_features(df)
+        validation = validate_config_columns(
+            df,
+            "S_WAY_NP_MY_2024",
+            "IVECO_S_X_WAY_NP",
+            sheet_ids,
+        )
+
+        outputs = build_sheet_outputs(df, validation)
+
+        self.assertEqual({output["sheet_id"] for output in outputs}, set(sheet_ids))
+        coolant = next(
+            output["dataframe"]
+            for output in outputs
+            if output["sheet_id"] == "np_coolant_temperature_high"
+        )
+        self.assertEqual(coolant.iloc[0]["Coolant_temperature_high_104_seconds"], "00:04:00")
 
 
 class Statistics403ConfigurationTest(unittest.TestCase):

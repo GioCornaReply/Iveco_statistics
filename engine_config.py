@@ -13,6 +13,8 @@ NEW_LAYOUT_SERIES = {
     "T_WAY_MY_2024",
 }
 
+NP_403_SERIES = "S_WAY_NP_MY_2024"
+
 SHEET_ALIASES = {
     # Nome storico usato nel primo runner locale.
     "5a": "catalyst_info",
@@ -26,6 +28,7 @@ DEFAULT_REPORT_SHEETS = [
     "urea_consumption_l100km",
     "urea_consumption_l100km_2",
     "average_vehicle_speed",
+    "np_average_vehicle_speed",
     "average_vehicle_speed_2",
     "average_start",
     "average_crank_per_hour",
@@ -76,11 +79,67 @@ DEFAULT_REPORT_SHEETS = [
     "6a_engine_brake_status",
     "6b_braking_torque",
     "turbocharger_revolutions",
+    "np_engine_lifecycle",
+    "np_engine_overspeed",
+    "np_catalyst_temperature",
+    "np_low_catalyst_efficiency",
+    "np_coolant_temperature_high",
+    "np_oil_temperature_high",
+    "np_boost_pressure_high",
+    "np_ambient_pressure_low",
+    "np_2a",
+    "np_2b",
+    "np_2c",
+    "np_3a",
+    "np_3c",
+    "np_3f",
+    "np_3g",
+    "np_4d",
+    "np_5c",
 ]
 
 VARIABLE_DISPLAY_NAMES = {
     "engineoverspeed_pct": "Engine overspeed [%]",
     "crank_100km_pct": "Average crank per 100 km [%]",
+    "engine_on_time": "Engine on time [h]",
+    "engine_overspeed_2600_rpm_seconds": "Engine overspeed > 2660 rpm [s]",
+    "post_catalyst_temperature_860_minutes": "Post-Catalyst temperature > 860 C [min]",
+    "cat_eff_minutes": "Low Catalyst Efficiency time [min]",
+    "cat_eff_counter": "Low Catalyst Efficiency events [count]",
+    "coolant_temperature_high_104_seconds": "Coolant temperature > 104 C [hh:mm:ss]",
+    "coolant_temperature_high_104_counter": "Coolant temperature > 104 C events [count]",
+    "high_oil_temperature_120_seconds": "Oil temperature > 120 C [hh:mm:ss]",
+    "high_oil_temperature_120_counter": "Oil temperature > 120 C events [count]",
+    "high_boost_pressure_seconds": "High boost pressure [hh:mm:ss]",
+    "high_boost_pressure_counter": "High boost pressure events [count]",
+    "low_ambient_pressure_seconds": "Low ambient pressure [hh:mm:ss]",
+    "low_ambient_pressure_counter": "Low ambient pressure events [count]",
+    "region1_coolantt": "Not optimal coolant temperature [102-107 C]",
+    "region2_coolantt": "Critical coolant temperature [>107 C]",
+    "oiltemp1": "Oil temperature OK [<120 C]",
+    "oiltemp2": "Oil temperature HIGH [120-125 C]",
+    "oiltemp3": "Oil temperature VERY HIGH [>125 C]",
+    "reg1_intake_temp": "Intake air temperature OK [35-50 C]",
+    "reg2_intake_temp": "Intake air temperature [50-65 C]",
+    "reg3_intake_temp": "Intake air temperature over 65 C",
+    "fueltemp1": "Too cold gas temperature [<-30 C]",
+    "fueltemp2": "Cold gas temperature [-30..-10 C]",
+    "fueltemp3": "Gas temperature OK [-10..0 C]",
+    "reg1_gas_railpressure": "Gas rail pressure too low [<4500 mbar]",
+    "reg2_gas_railpressure": "Gas rail pressure low [4500-5500 mbar]",
+    "reg3_gas_railpressure": "Gas rail pressure OK [5500-6500 mbar]",
+    "reg1_mixture_selfpoor": "Mixture self-adapting poor OK [1-1.10]",
+    "reg2_mixture_selfpoor": "Mixture self-adapting poor [1.10-1.15]",
+    "reg3_mixture_selfpoor": "Mixture self-adapting very poor [>1.15]",
+    "reg1_mixture_selfrich": "Mixture self-adapting very rich [<0.78]",
+    "reg2_mixture_selfrich": "Mixture self-adapting rich [0.78-0.8]",
+    "reg3_mixture_selfrich": "Mixture self-adapting rich OK [0.8-1]",
+    "reg1_cat_eff": "Catalyst Efficiency [0-50 %]",
+    "reg2_cat_eff": "Catalyst Efficiency [50-60 %]",
+    "reg3_cat_eff": "Catalyst Efficiency [60-100 %]",
+    "reg1_intake_manifoldpressure": "Intake manifold pressure [2000-2300 mbar]",
+    "reg2_intake_manifoldpressure": "Intake manifold pressure [2300-2500 mbar]",
+    "reg3_intake_manifoldpressure": "Intake manifold pressure over 2500 mbar",
     "tor_rev_cutoff": "Cut off with gear engaged (250-2500 rpm / -15 - 0 %)",
     "tor_rev_low": "Low Load (250-2500 rpm / 0-15%)",
     "tor_rev_lowlow": "Low Load, low engine speed, high specific fuel consumption (250-650 rpm / 15-45 %)",
@@ -280,6 +339,18 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["Average_vehicle_speed_split"],
         "trigger": 0,
         "zero_as_null": True,
+        "skip_series": {NP_403_SERIES},
+    },
+    "np_average_vehicle_speed": {
+        "name": "Average Vehicle Speed",
+        "use_percentage_columns": False,
+        "series": {NP_403_SERIES: ["Average_vehicle_speed"]},
+        "group_by": ["Average_vehicle_speed_split"],
+        "allowed_group_values": {
+            "Average_vehicle_speed_split": ["<20 km/h", "20-40 km/h"],
+        },
+        "trigger": 0,
+        "zero_as_null": True,
     },
     "average_vehicle_speed_2": {
         "name": "Average Vehicle Speed 2",
@@ -336,6 +407,7 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["product_group"],
         "trigger": 1,
         "zero_as_null": True,
+        "skip_series": {NP_403_SERIES},
     },
     "engine_over_speed_2": {
         "name": "Engine over speed 2",
@@ -344,6 +416,7 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["product_model"],
         "trigger": 1,
         "zero_as_null": True,
+        "skip_series": {NP_403_SERIES},
     },
     "up_downstream_temperatures": {
         "name": "Up&Downstream Temperatures 2",
@@ -434,6 +507,174 @@ REPORT_SHEET_CONFIG = {
             "Intakeairpressure_max",
         ],
     },
+    "np_engine_lifecycle": {
+        "name": "Engine Lifecycle",
+        "use_percentage_columns": False,
+        "series": {NP_403_SERIES: ["Engine_on_time"]},
+        "group_by": ["product_model"],
+        "trigger": 0,
+        "zero_as_null": True,
+    },
+    "np_engine_overspeed": {
+        "name": "Engine Overspeed [s]",
+        "use_percentage_columns": False,
+        "series": {NP_403_SERIES: ["Engine_overspeed_2600_rpm_seconds"]},
+        "group_by": ["engine_model"],
+        "trigger": 1,
+        "zero_as_null": False,
+    },
+    "np_catalyst_temperature": {
+        "name": "Catalyst Temperature [min]",
+        "use_percentage_columns": False,
+        "series": {NP_403_SERIES: ["Post_Catalyst_temperature_860_minutes"]},
+        "group_by": ["engine_model"],
+        "trigger": 1,
+        "zero_as_null": False,
+    },
+    "np_low_catalyst_efficiency": {
+        "name": "Low Catalyst Efficiency",
+        "use_percentage_columns": False,
+        "series": {NP_403_SERIES: ["Cat_Eff_minutes", "Cat_Eff_Counter"]},
+        "group_by": ["engine_model"],
+        "triggers": [1, 1],
+        "zero_as_null": False,
+    },
+    "np_coolant_temperature_high": {
+        "name": "Coolant Temperature >104 C",
+        "use_percentage_columns": False,
+        "series": {
+            NP_403_SERIES: [
+                "Coolant_temperature_high_104_seconds",
+                "Coolant_temperature_high_104_counter",
+            ]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [1, 1],
+        "zero_as_null": False,
+        "duration_columns": ["Coolant_temperature_high_104_seconds"],
+    },
+    "np_oil_temperature_high": {
+        "name": "Oil Temperature >120 C",
+        "use_percentage_columns": False,
+        "series": {
+            NP_403_SERIES: [
+                "High_oil_temperature_120_seconds",
+                "High_oil_temperature_120_counter",
+            ]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [1, 1],
+        "zero_as_null": False,
+        "duration_columns": ["High_oil_temperature_120_seconds"],
+    },
+    "np_boost_pressure_high": {
+        "name": "High Boost Pressure",
+        "use_percentage_columns": False,
+        "series": {
+            NP_403_SERIES: [
+                "High_boost_pressure_seconds",
+                "High_boost_pressure_counter",
+            ]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [1, 1],
+        "zero_as_null": False,
+        "duration_columns": ["High_boost_pressure_seconds"],
+    },
+    "np_ambient_pressure_low": {
+        "name": "Low Ambient Pressure",
+        "use_percentage_columns": False,
+        "series": {
+            NP_403_SERIES: [
+                "Low_ambient_pressure_seconds",
+                "Low_ambient_pressure_counter",
+            ]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [1, 1],
+        "zero_as_null": False,
+        "duration_columns": ["Low_ambient_pressure_seconds"],
+    },
+    "np_2a": {
+        "name": "2a) Engine coolant temperature",
+        "series": {NP_403_SERIES: ["region1_coolantT", "region2_coolantT"]},
+        "group_by": ["engine_model"],
+        "triggers": [1, 1],
+    },
+    "np_2b": {
+        "name": "2b) Oil temperature",
+        "series": {NP_403_SERIES: ["oiltemp1", "oiltemp2", "oiltemp3"]},
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1],
+    },
+    "np_2c": {
+        "name": "2c) Intake air temperature",
+        "series": {
+            NP_403_SERIES: ["reg1_Intake_Temp", "reg2_Intake_Temp", "reg3_Intake_Temp"]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1],
+    },
+    "np_3a": {
+        "name": "3a) Gas temperature",
+        "series": {NP_403_SERIES: ["fueltemp1", "fueltemp2", "fueltemp3"]},
+        "group_by": ["engine_model"],
+        "triggers": [1, 1, 0],
+    },
+    "np_3c": {
+        "name": "3c) Gas rail pressure",
+        "series": {
+            NP_403_SERIES: [
+                "reg1_gas_railpressure",
+                "reg2_gas_railpressure",
+                "reg3_gas_railpressure",
+            ]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [1, 1, 0],
+    },
+    "np_3f": {
+        "name": "3f) Mixture self-adapt poor",
+        "series": {
+            NP_403_SERIES: [
+                "reg1_Mixture_selfpoor",
+                "reg2_Mixture_selfpoor",
+                "reg3_Mixture_selfpoor",
+            ]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1],
+    },
+    "np_3g": {
+        "name": "3g) Mixture self-adapt rich",
+        "series": {
+            NP_403_SERIES: [
+                "reg1_Mixture_selfrich",
+                "reg2_Mixture_selfrich",
+                "reg3_Mixture_selfrich",
+            ]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [1, 1, 0],
+    },
+    "np_4d": {
+        "name": "4d) Catalyst Efficiency",
+        "series": {NP_403_SERIES: ["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"]},
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1],
+    },
+    "np_5c": {
+        "name": "5c) Intake manifold pressure",
+        "series": {
+            NP_403_SERIES: [
+                "reg1_Intake_manifoldpressure",
+                "reg2_Intake_manifoldpressure",
+                "reg3_Intake_manifoldpressure",
+            ]
+        },
+        "group_by": ["engine_model"],
+        "triggers": [0, 1, 1],
+    },
     "1a": {
         "name": "1a) Engine Torque-Speed",
         "group_by": ["engine_model", "power", "mission"],
@@ -456,6 +697,7 @@ REPORT_SHEET_CONFIG = {
             "region6_torque_enginespeed",
             "region7_torque_enginespeed",
         ],
+        "skip_series": {NP_403_SERIES},
     },
     "1a_2": {
         "name": "1a_2) Engine Torque-Speed",
@@ -479,6 +721,7 @@ REPORT_SHEET_CONFIG = {
             "region6_torque_enginespeed",
             "region7_torque_enginespeed",
         ],
+        "skip_series": {NP_403_SERIES},
     },
     "1b": {
         "name": "1b) Engine Torque-Veh Speed",
@@ -518,6 +761,7 @@ REPORT_SHEET_CONFIG = {
             "region8_torque_vehiclespeed",
             "region9_torque_vehiclespeed",
         ],
+        "skip_series": {NP_403_SERIES},
     },
     "1c": {
         "name": "1c) Engine revolutions",
@@ -562,6 +806,7 @@ REPORT_SHEET_CONFIG = {
         "series": {"S_WAY_AT_AD_MY_2024": ["p_oil_1", "p_oil_2", "p_oil_3"]},
         "new_layout": ["p_oil_ok_1", "p_oil_tbc_1", "p_oil_low_1"],
         "legacy": ["oilpressure_low1", "oilpressure_tocheck1", "oilpressure_ok1"],
+        "skip_series": {NP_403_SERIES},
     },
     "2b": {
         "name": "2b) Oil sump pressure analysis",
@@ -574,6 +819,7 @@ REPORT_SHEET_CONFIG = {
             "oilpressuresump_tobechecked1",
             "oilpressuresump_critical1",
         ],
+        "skip_series": {NP_403_SERIES},
     },
     "2c": {
         "name": "2c) Oil temperature",
@@ -582,6 +828,7 @@ REPORT_SHEET_CONFIG = {
         "groups": {"EUROCARGO": ["oil_t_ok", "oil_t_high"]},
         "new_layout": ["oil_t_ok", "oil_t_high"],
         "legacy": ["oiltemp1", "oiltemp2"],
+        "skip_series": {NP_403_SERIES},
     },
     "3a": {
         "name": "3a) Coolant Temperature",
@@ -590,6 +837,7 @@ REPORT_SHEET_CONFIG = {
         "groups": {"EUROCARGO": ["eng_t_cool_1", "eng_t_cool_2", "eng_t_cool_3"]},
         "new_layout": ["eng_t_cool_1", "eng_t_cool_2", "eng_t_cool_3"],
         "legacy": ["region1_coolantT", "region2_coolantT", "region3_coolantT"],
+        "skip_series": {NP_403_SERIES},
     },
     "3a_1": {
         "name": "3a_1) Coolant temp-pressure",
@@ -617,6 +865,7 @@ REPORT_SHEET_CONFIG = {
         "triggers": [0, 1, 1, 1],
         "groups": {"EUROCARGO": ["int_air_t_1", "int_air_t_2", "int_air_t_3", "int_air_t_4"]},
         "new_layout": ["int_air_t_1", "int_air_t_2", "int_air_t_3", "int_air_t_4"],
+        "skip_series": {NP_403_SERIES},
     },
     "3c_1": {
         "name": "3c) Fuel pre-filter pressure",
@@ -658,6 +907,7 @@ REPORT_SHEET_CONFIG = {
         "triggers": [0, 1, 1, 1],
         "skip_groups": {"EUROCARGO"},
         "new_layout": ["egr_position_1", "egr_position_2", "egr_position_3"],
+        "skip_series": {NP_403_SERIES},
     },
     "4a_1": {
         "name": "4a_1) Catalyst eff [g-kWh]",
@@ -710,6 +960,7 @@ REPORT_SHEET_CONFIG = {
         "groups": {"EUROCARGO": ["urea_dep_1", "urea_dep_2", "urea_dep_3", "urea_dep_4"]},
         "new_layout": ["nh3_conc_1", "nh3_conc_2", "nh3_conc_3"],
         "legacy": ["region1_NH3", "region2_NH3", "regipn3_NH3"],
+        "skip_series": {NP_403_SERIES},
     },
     "4e": {
         "name": "4e) Urea deposit accumulation",
@@ -787,7 +1038,7 @@ REPORT_SHEET_CONFIG = {
         "trigger": 0,
         "groups": {"EUROCARGO": ["dpf_diff_p_1", "dpf_diff_p_2", "dpf_diff_p_3", "dpf_diff_p_4"]},
         "new_layout": ["dpf_diff_p_1", "dpf_diff_p_2", "dpf_diff_p_3", "dpf_diff_p_4"],
-        "skip_series": {"S_WAY_AS_E3", "S_WAY_AS_E5"},
+        "skip_series": {"S_WAY_AS_E3", "S_WAY_AS_E5", NP_403_SERIES},
         "legacy": ["deltap_flux_ok1", "deltap_flux_highpr1", "deltap_flux_lowpr1", "deltap_flux_nok1"],
     },
     "5d": {
@@ -932,6 +1183,8 @@ def get_sheet_settings(sheet_id):
         "zero_as_null_exclude": conf.get("zero_as_null_exclude", []),
         "max_value": conf.get("max_value"),
         "scale": conf.get("scale", 1),
+        "allowed_group_values": conf.get("allowed_group_values", {}),
+        "duration_columns": conf.get("duration_columns", []),
     }
 
 

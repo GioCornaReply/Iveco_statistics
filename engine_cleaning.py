@@ -212,6 +212,62 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
         )
         df = _fill_derived_column(df, "mileage_split", mileage_split_expr)
 
+    return add_np_403_calculated_features(df)
+
+
+def _find_column_case_insensitive(df: DataFrame, column_name: str):
+    """Risolve una colonna del dizionario NP senza dipendere dal casing Spark."""
+    return {name.lower(): name for name in df.columns}.get(column_name.lower())
+
+
+def _duration_seconds(column_name: str):
+    """Converte un timer numerico o `hh:mm:ss` in secondi."""
+    raw_value = F.trim(F.col(f"`{column_name}`").cast("string"))
+    numeric_value = F.when(
+        raw_value.rlike(r"^[+-]?[0-9]+(?:[.][0-9]+)?$"),
+        raw_value.cast("double"),
+    )
+    hours = F.regexp_extract(raw_value, r"^([0-9]+):[0-9]{1,2}:[0-9]{1,2}(?:[.][0-9]+)?$", 1)
+    minutes = F.regexp_extract(raw_value, r"^[0-9]+:([0-9]{1,2}):[0-9]{1,2}(?:[.][0-9]+)?$", 1)
+    seconds = F.regexp_extract(raw_value, r"^[0-9]+:[0-9]{1,2}:([0-9]{1,2}(?:[.][0-9]+)?)$", 1)
+    clock_value = F.when(
+        raw_value.rlike(r"^[0-9]+:[0-9]{1,2}:[0-9]{1,2}(?:[.][0-9]+)?$"),
+        hours.cast("double") * F.lit(3600.0)
+        + minutes.cast("double") * F.lit(60.0)
+        + seconds.cast("double"),
+    )
+    return F.coalesce(numeric_value, clock_value)
+
+
+def add_np_403_calculated_features(df: DataFrame) -> DataFrame:
+    """Normalizza timer/counter MY24 NP nelle unita' richieste dal report 403."""
+    duration_columns = (
+        ("Engine_overspeed_2600_rpm_Timer", "Engine_overspeed_2600_rpm_seconds", 1.0),
+        ("Post_Catalyst_temperature_860_timer", "Post_Catalyst_temperature_860_minutes", 1.0 / 60.0),
+        ("Cat_Eff_Timer", "Cat_Eff_minutes", 1.0 / 60.0),
+        ("Coolant_temperature_high_104_timer", "Coolant_temperature_high_104_seconds", 1.0),
+        ("High_oil_temperature_120_timer", "High_oil_temperature_120_seconds", 1.0),
+        ("High_boost_pressure_timer", "High_boost_pressure_seconds", 1.0),
+        ("Low_ambient_pressure_timer", "Low_ambient_pressure_seconds", 1.0),
+    )
+    for source_name, target_name, scale in duration_columns:
+        source_column = _find_column_case_insensitive(df, source_name)
+        if source_column is not None:
+            df = df.withColumn(target_name, _duration_seconds(source_column) * F.lit(scale))
+
+    numeric_columns = (
+        "Engine_on_time",
+        "Cat_Eff_Counter",
+        "Coolant_temperature_high_104_counter",
+        "High_oil_temperature_120_counter",
+        "High_boost_pressure_counter",
+        "Low_ambient_pressure_counter",
+    )
+    for target_name in numeric_columns:
+        source_column = _find_column_case_insensitive(df, target_name)
+        if source_column is not None:
+            df = df.withColumn(target_name, F.col(f"`{source_column}`").cast("double"))
+
     return df
 
 

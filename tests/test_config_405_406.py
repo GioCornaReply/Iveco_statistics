@@ -23,6 +23,10 @@ class Config405406Test(unittest.TestCase):
 
     def test_known_fat_table_configs_use_static_metadata(self):
         self.assertEqual(
+            get_metadata_for_config({403}),
+            ("MISSION_TEST", "IVECO_S_X_WAY_NP", "S_WAY_NP_MY_2024"),
+        )
+        self.assertEqual(
             get_metadata_for_config({399}),
             ("MISSION_TEST", "IVECO_S_WAY", "S_WAY_AT_AD_MY_2024"),
         )
@@ -56,6 +60,10 @@ class Config405406Test(unittest.TestCase):
         )
 
     def test_export_file_name_handles_hyphenated_groups(self):
+        self.assertEqual(
+            get_export_file_name("IVECO_S_X_WAY_NP", {403}),
+            "Statistics_HEAVY_SWAY_NP_403_dataset.xlsx",
+        )
         self.assertEqual(
             get_export_file_name("IVECO_X-WAY", {405}),
             "Statistics_HEAVY_XWAY_405_dataset.xlsx",
@@ -180,14 +188,14 @@ class Config405406Test(unittest.TestCase):
         self.assertTrue(settings["zero_as_null"])
         self.assertEqual(settings["zero_as_null_exclude"], ["Turbochargerrevolutions_130000"])
 
-    def test_403_uses_normalized_overspeed_and_crank_metrics(self):
+    def test_403_uses_timer_overspeed_and_normalized_crank_metrics(self):
         self.assertEqual(
             get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", "engine_over_speed"),
-            ["engineoverspeed_pct", "vehicleoverspeed"],
+            [],
         )
         self.assertEqual(
-            get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", "engine_over_speed_2"),
-            ["engineoverspeed_pct", "vehicleoverspeed"],
+            get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", "np_engine_overspeed"),
+            ["Engine_overspeed_2600_rpm_seconds"],
         )
         for sheet_id in ("average_crank_per_100km", "average_crank_per_100km_2"):
             settings = get_sheet_settings(sheet_id)
@@ -196,6 +204,52 @@ class Config405406Test(unittest.TestCase):
                 ["crank_100km_pct"],
             )
             self.assertEqual(settings["scale"], 1)
+
+    def test_403_np_uses_dedicated_sheets_and_excludes_diesel_collisions(self):
+        series = "S_WAY_NP_MY_2024"
+        group = "IVECO_S_X_WAY_NP"
+
+        for sheet_id in ("1a", "1a_2", "1b", "2a", "2b", "2c", "3a", "3c", "3f", "4d", "5c"):
+            self.assertEqual(get_columns_for_sheet(series, group, sheet_id), [])
+
+        expected = {
+            "np_2a": ["region1_coolantT", "region2_coolantT"],
+            "np_2b": ["oiltemp1", "oiltemp2", "oiltemp3"],
+            "np_2c": ["reg1_Intake_Temp", "reg2_Intake_Temp", "reg3_Intake_Temp"],
+            "np_3a": ["fueltemp1", "fueltemp2", "fueltemp3"],
+            "np_3c": ["reg1_gas_railpressure", "reg2_gas_railpressure", "reg3_gas_railpressure"],
+            "np_3f": ["reg1_Mixture_selfpoor", "reg2_Mixture_selfpoor", "reg3_Mixture_selfpoor"],
+            "np_3g": ["reg1_Mixture_selfrich", "reg2_Mixture_selfrich", "reg3_Mixture_selfrich"],
+            "np_4d": ["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"],
+            "np_5c": [
+                "reg1_Intake_manifoldpressure",
+                "reg2_Intake_manifoldpressure",
+                "reg3_Intake_manifoldpressure",
+            ],
+        }
+        for sheet_id, columns in expected.items():
+            self.assertEqual(get_columns_for_sheet(series, group, sheet_id), columns)
+
+    def test_403_np_calculated_sheet_units_and_vehicle_speed_bands(self):
+        series = "S_WAY_NP_MY_2024"
+        group = "IVECO_S_X_WAY_NP"
+
+        self.assertEqual(
+            get_columns_for_sheet(series, group, "np_engine_lifecycle"),
+            ["Engine_on_time"],
+        )
+        self.assertEqual(
+            get_columns_for_sheet(series, group, "np_low_catalyst_efficiency"),
+            ["Cat_Eff_minutes", "Cat_Eff_Counter"],
+        )
+        self.assertEqual(
+            get_sheet_settings("np_average_vehicle_speed")["allowed_group_values"],
+            {"Average_vehicle_speed_split": ["<20 km/h", "20-40 km/h"]},
+        )
+        self.assertEqual(
+            get_sheet_settings("np_coolant_temperature_high")["duration_columns"],
+            ["Coolant_temperature_high_104_seconds"],
+        )
 
     def test_sheet_names_follow_latest_catalog_with_excel_safe_abbreviations(self):
         expected_names = {

@@ -129,21 +129,38 @@ def report_pivot_pyspark_fixed(
 
     for col_name, trigger in valid_pairs:
         avg_col = F.col(f"`{col_name}`")
-        std_col = F.col(f"`StdDev_{col_name}`")
+        std_name = f"StdDev_{col_name}"
+        count_name = f"Count_{col_name}"
+        count_col = F.col(f"`{count_name}`")
+        df_uno = df_uno.withColumn(
+            std_name,
+            F.when(count_col > 0, F.col(f"`{std_name}`")),
+        )
+        std_col = F.col(f"`{std_name}`")
         advice_name = f"Advice_{col_name}"
         alert_name = f"Alert_{col_name}"
 
         if trigger == 1:
-            df_uno = df_uno.withColumn(advice_name, F.round(avg_col + std_col / 2, 2))
-            df_uno = df_uno.withColumn(alert_name, F.round(avg_col + std_col, 2))
-        else:
             df_uno = df_uno.withColumn(
                 advice_name,
-                F.when(avg_col > std_col / 2, F.round(avg_col - std_col / 2, 2)).otherwise(0),
+                F.when(count_col > 0, F.round(avg_col + std_col / 2, 2)),
             )
             df_uno = df_uno.withColumn(
                 alert_name,
-                F.when(avg_col > std_col, F.round(avg_col - std_col, 2)).otherwise(0),
+                F.when(count_col > 0, F.round(avg_col + std_col, 2)),
+            )
+        else:
+            df_uno = df_uno.withColumn(
+                advice_name,
+                F.when(count_col <= 0, None)
+                .when(avg_col > std_col / 2, F.round(avg_col - std_col / 2, 2))
+                .otherwise(0),
+            )
+            df_uno = df_uno.withColumn(
+                alert_name,
+                F.when(count_col <= 0, None)
+                .when(avg_col > std_col, F.round(avg_col - std_col, 2))
+                .otherwise(0),
             )
 
     ordered_columns = list(variabili)

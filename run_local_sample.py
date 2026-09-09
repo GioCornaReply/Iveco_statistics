@@ -164,10 +164,11 @@ def read_input_data(spark, input_mode, sample_path, input_format, config):
 def validate_config_columns(df, p_series, p_group, sheet_ids):
     """Mostra quali colonne configurate sono presenti nel sample."""
     validation = {}
+    available_by_lower = {col_name.lower(): col_name for col_name in df.columns}
     for sheet_id in sheet_ids:
         configured = get_columns_for_sheet(p_series, p_group, sheet_id, df.columns)
-        present = [col_name for col_name in configured if col_name in df.columns]
-        missing = [col_name for col_name in configured if col_name not in df.columns]
+        present = [available_by_lower[col_name.lower()] for col_name in configured if col_name.lower() in available_by_lower]
+        missing = [col_name for col_name in configured if col_name.lower() not in available_by_lower]
 
         validation[sheet_id] = {
             "configured": configured,
@@ -203,11 +204,16 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
         log_step(f"Sheet {sheet_id}: colonne group_by non presenti, export saltato")
         return None, validation_entry.get("sheet_name", settings["name"])
 
+    df_filtered = df
+    for group_col, allowed_values in settings["allowed_group_values"].items():
+        if group_col in df_filtered.columns:
+            df_filtered = df_filtered.filter(F.col(f"`{group_col}`").isin(allowed_values))
+
     if settings["use_percentage_columns"]:
-        df_stats = pyspark_variabili_x(df, present_cols, sheet_id)
+        df_stats = pyspark_variabili_x(df_filtered, present_cols, sheet_id)
         pivot_cols = [f"{col_name.upper()}_{sheet_id.upper()}" for col_name in present_cols]
     else:
-        df_stats = df
+        df_stats = df_filtered
         pivot_cols = present_cols
 
     if settings["zero_as_null"]:
@@ -246,7 +252,34 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
         triggers,
         target_columns=settings["target_columns"],
     )
+    if df_pivot is not None:
+        df_pivot = format_duration_statistics(df_pivot, settings["duration_columns"])
     return df_pivot, validation_entry.get("sheet_name", settings["name"])
+
+
+def format_seconds_as_hhmmss(value):
+    """Formatta una durata numerica senza il limite delle 24 ore."""
+    if value is None or pd.isna(value):
+        return None
+    total_seconds = max(0, int(round(float(value))))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def format_duration_statistics(df, duration_columns):
+    """Converte in `hh:mm:ss` media, STD e soglie dei timer configurati."""
+    result = df.copy()
+    for metric_name in duration_columns:
+        for column_name in (
+            metric_name,
+            f"StdDev_{metric_name}",
+            f"Advice_{metric_name}",
+            f"Alert_{metric_name}",
+        ):
+            if column_name in result.columns:
+                result[column_name] = result[column_name].map(format_seconds_as_hhmmss)
+    return result
 
 
 def build_sheet_outputs(df, validation):

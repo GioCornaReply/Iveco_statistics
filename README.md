@@ -101,6 +101,7 @@ perche' viene mantenuto solo l'ultimo update per ogni VIN.
 Per le richieste MY24 V1.6.4 C9, eseguire run separate dal widget `config`:
 
 ```text
+403  # S-WAY MY24 NP/Gas
 405  # X-WAY MY24 AT/AD V1.6.4 C9
 406  # T-WAY MY24 V1.6.4 C9
 408  # Mission Test MY24 su Unity Catalog
@@ -117,6 +118,17 @@ Da terminale/job Python:
 ```bash
 python -m run_local_sample --input-mode fat_table --config 399
 ```
+
+Per l'estrazione MY24 NP/Gas:
+
+```bash
+python -m run_local_sample --input-mode fat_table --config 403
+```
+
+La 403 usa il profilo dedicato `S_WAY_NP_MY_2024`: esclude le matrici 1a/1b,
+usa i fogli gas 2a/2b/2c/3a/3c/3f/3g/4d/5c e include i timer/counter NP.
+Il foglio Fuel Consumption resta presente; quando la sorgente contiene solo
+zero o null, le statistiche non calcolabili vengono lasciate vuote.
 
 Per non deduplicare il sample per VIN:
 
@@ -149,7 +161,9 @@ C:\Users\g.cornacchia\AppData\Local\Python\bin\python.exe -m run_local_sample --
 7. esporta l'Excel.
 
 Gli sheet sono configurati in `engine_config.py`; il notebook non deve contenere liste hardcoded.
-La lista default contiene 58 sheet configurati, incluso `Complete Dataset`, piu' i fogli duplicati legacy come `1a_2`, `1c_2`, `3e_2`, `4c_2` e `5a_dpf_2`.
+La lista default include `Complete Dataset`, i fogli duplicati legacy come
+`1a_2`, `1c_2`, `3e_2`, `4c_2` e `5a_dpf_2`, e le voci dedicate NP che si
+attivano soltanto per la serie 403.
 
 ## Note Di Migrazione
 
