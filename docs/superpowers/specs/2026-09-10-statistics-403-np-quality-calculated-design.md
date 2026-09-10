@@ -62,7 +62,24 @@ rimane nella configurazione per supportare motorizzazioni future.
 
 ## Calculated NP
 
-Le colonne calculated sono derivate dai campi sorgente del template:
+La fat table 403 espone gia' le colonne calculated finali. Queste colonne sono
+la sorgente primaria dei fogli:
+
+- `engine_life_cycle`;
+- `Low_Cat_Eff_time` e `Low_Cat_Eff_count`;
+- `Catalyst_temp_860`;
+- `engineoverspeed`;
+- `Coolant_temp_high_104`;
+- `Oil_temp_high_120`;
+- `Boost_pressure_high_25`;
+- `Ambient_pressure_low_850`.
+
+Il `Complete Dataset` del workbook di riferimento conferma che tutti questi
+campi sono presenti. I fogli mancavano perche' la configurazione cercava
+soltanto i timer grezzi con nomi differenti.
+
+Quando una colonna finale non e' disponibile, la pipeline mantiene come
+fallback la derivazione dai campi sorgente del template:
 
 - Engine Life Cycle [%]: `100 - mileage / 10000`; il valore e' valido solo
   nell'intervallo chiuso `[0, 100]`;
@@ -79,12 +96,20 @@ Le colonne calculated sono derivate dai campi sorgente del template:
 - High boost pressure > 2.5 bar [min]: `High_boost_pressure_timer / 60`;
 - Low ambient pressure < 850 mbar [seconds]: `Low_ambient_pressure_timer`.
 
+Se entrambe le sorgenti sono disponibili, il valore della colonna finale ha
+priorita'; il fallback viene usato soltanto per riempire un valore finale
+nullo. Gli zero sono valori validi e non attivano il fallback.
+
 Time with Low Catalyst Efficiency e relativo count sono esportati nello
 stesso foglio. I counter di coolant, oil, boost e ambient restano disponibili
 nel Complete Dataset ma non sono inclusi nei rispettivi fogli calculated.
 I timer sorgente possono essere numerici oppure stringhe `hh:mm:ss`; vengono
 prima normalizzati in secondi e poi convertiti nell'unita' finale richiesta.
 Gli zero sono validi per timer e counter e rimangono nelle statistiche.
+
+I nomi dei fogli calculated descrivono soglia e unita' e rispettano il limite
+Excel di 31 caratteri. In particolare `Engine Life Cycle (%)` sostituisce la
+forma con parentesi quadre, che Excel non consente nei nomi dei fogli.
 
 ## Compatibilita' e test
 
@@ -101,5 +126,8 @@ I test automatici copriranno:
 - assenza della fascia `>40 km/h`;
 - raggruppamenti `engine_model` e `mileage_range`;
 - formula e limiti dell'Engine Life Cycle;
+- priorita' delle colonne finali e fallback dai timer grezzi;
+- generazione di tutti gli otto fogli con lo schema reale della fat table 403,
+  inclusi quelli con soli valori zero;
 - nomi, unita' e composizione dei fogli calculated;
 - regressione completa delle configurazioni esistenti.
