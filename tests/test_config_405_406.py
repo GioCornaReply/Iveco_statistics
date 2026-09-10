@@ -236,7 +236,7 @@ class Config405406Test(unittest.TestCase):
 
         self.assertEqual(
             get_columns_for_sheet(series, group, "np_engine_lifecycle"),
-            ["Engine_on_time"],
+            ["engine_life_cycle"],
         )
         self.assertEqual(
             get_columns_for_sheet(series, group, "np_low_catalyst_efficiency"),
@@ -247,9 +247,33 @@ class Config405406Test(unittest.TestCase):
             {"Average_vehicle_speed_split": ["<20 km/h", "20-40 km/h"]},
         )
         self.assertEqual(
-            get_sheet_settings("np_coolant_temperature_high")["duration_columns"],
-            ["Coolant_temperature_high_104_seconds"],
+            get_sheet_settings("np_average_vehicle_speed")["required_group_values"],
+            {"Average_vehicle_speed_split": ["<20 km/h", "20-40 km/h"]},
         )
+        self.assertEqual(
+            get_sheet_settings("np_engine_lifecycle")["group_by"],
+            ["engine_model", "mileage_range"],
+        )
+        self.assertEqual(
+            get_sheet_settings("np_low_catalyst_efficiency")["group_by"],
+            ["engine_model", "mileage_range"],
+        )
+
+        calculated_columns = {
+            "np_coolant_temperature_high": ["Coolant_temperature_high_104_seconds"],
+            "np_oil_temperature_high": ["High_oil_temperature_120_seconds"],
+            "np_boost_pressure_high": ["High_boost_pressure_minutes"],
+            "np_ambient_pressure_low": ["Low_ambient_pressure_seconds"],
+        }
+        for sheet_id, columns in calculated_columns.items():
+            self.assertEqual(get_columns_for_sheet(series, group, sheet_id), columns)
+            self.assertEqual(get_sheet_settings(sheet_id)["duration_columns"], [])
+
+        for sheet_id in ("np_3c", "np_3f", "np_3g", "np_4d"):
+            self.assertEqual(
+                get_sheet_settings(sheet_id)["group_by"],
+                ["engine_model", "mileage_range"],
+            )
 
     def test_sheet_names_follow_latest_catalog_with_excel_safe_abbreviations(self):
         expected_names = {

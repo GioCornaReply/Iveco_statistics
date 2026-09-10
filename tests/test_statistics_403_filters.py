@@ -1,12 +1,17 @@
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import unittest
 
 import pandas as pd
 from pyspark.sql import SparkSession
 
-from engine_cleaning import add_np_403_calculated_features, apply_statistics_quality_filters
+from engine_cleaning import (
+    add_np_403_calculated_features,
+    apply_statistics_quality_filters,
+    exclude_corrupt_statistics_rows,
+    keep_latest_record_per_vin,
+)
 from engine_config import get_sheet_settings
 from run_local_sample import (
     DEFAULT_KEEP_LATEST_PER_VIN,
@@ -76,6 +81,7 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
             [
                 (
                     "12.5",
+                    250000.0,
                     "01:02:03",
                     "00:02:00",
                     "00:03:00",
@@ -92,6 +98,7 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
             ],
             [
                 "Engine_on_time",
+                "mileage",
                 "Engine_overspeed_2600_rpm_Timer",
                 "Post_Catalyst_temperature_860_timer",
                 "Cat_Eff_Timer",
@@ -110,17 +117,19 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
         row = add_np_403_calculated_features(df).first()
 
         self.assertEqual(row.Engine_on_time, 12.5)
+        self.assertEqual(row.engine_life_cycle, 75.0)
         self.assertEqual(row.Engine_overspeed_2600_rpm_seconds, 3723.0)
         self.assertEqual(row.Post_Catalyst_temperature_860_minutes, 2.0)
         self.assertEqual(row.Cat_Eff_minutes, 3.0)
         self.assertEqual(row.Coolant_temperature_high_104_seconds, 90000.0)
         self.assertEqual(row.High_oil_temperature_120_seconds, 30.0)
+        self.assertEqual(row.High_boost_pressure_minutes, 10.0)
+        self.assertEqual(row.Low_ambient_pressure_seconds, 1200.0)
         self.assertEqual(row.High_boost_pressure_counter, 7.0)
 
-    def test_np_vehicle_speed_excludes_over_40_band(self):
+    def test_np_vehicle_speed_excludes_over_40_and_adds_missing_under_20_band(self):
         df = self.spark.createDataFrame(
             [
-                ("<20 km/h", 10.0),
                 ("20-40 km/h", 30.0),
                 (">40 km/h", 50.0),
             ],
@@ -134,6 +143,66 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
         result, _ = build_sheet_pivot(df, "np_average_vehicle_speed", validation)
 
         self.assertEqual(set(result["Average_vehicle_speed_split"]), {"<20 km/h", "20-40 km/h"})
+        under_20 = result[result["Average_vehicle_speed_split"] == "<20 km/h"].iloc[0]
+        self.assertTrue(pd.isna(under_20["Average_vehicle_speed"]))
+        self.assertEqual(under_20["Count_Average_vehicle_speed"], 0)
+
+    def test_corrupt_latest_np_403_record_falls_back_to_previous_valid_record(self):
+        df = self.spark.createDataFrame(
+            [
+                (
+                    "ZCFEG2RP70C542992",
+                    403,
+                    datetime(2026, 8, 1),
+                    45.0,
+                    1200.0,
+                    2.0,
+                    5.0,
+                    2000.0,
+                ),
+                (
+                    "ZCFEG2RP70C542992",
+                    403,
+                    datetime(2026, 9, 1),
+                    538976248.0,
+                    8982946.67,
+                    167471.52,
+                    538976288.0,
+                    1792.05,
+                ),
+            ],
+            [
+                "vin",
+                "id_config",
+                "udt_timestamp",
+                "Average_vehicle_speed",
+                "Average_enginespeed",
+                "avgcrank_100km",
+                "engineoverspeed",
+                "enginehours",
+            ],
+        )
+
+        row = keep_latest_record_per_vin(df).first()
+
+        self.assertEqual(row.udt_timestamp, datetime(2026, 8, 1))
+        self.assertEqual(row.Average_vehicle_speed, 45.0)
+
+    def test_single_bad_metric_does_not_remove_np_403_record(self):
+        df = self.spark.createDataFrame(
+            [("single-error", 403, 90.0, 1200.0, 2.0, 5.0, 2000.0)],
+            [
+                "vin",
+                "id_config",
+                "Average_vehicle_speed",
+                "Average_enginespeed",
+                "avgcrank_100km",
+                "engineoverspeed",
+                "enginehours",
+            ],
+        )
+
+        self.assertEqual(exclude_corrupt_statistics_rows(df).count(), 1)
 
     def test_fuel_sheet_leaves_statistics_blank_when_all_values_are_zero(self):
         df = self.spark.createDataFrame(
@@ -185,6 +254,8 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
             "axle_description": "5.29",
             "mission": "20 - 40 km/h URBAN",
             "engine_model": "Cursor 9",
+            "mileage": 250000.0,
+            "mileage_range": "200k-300k km",
             "Average_vehicle_speed_split": "20-40 km/h",
             "Average_vehicle_speed": 30.0,
             "average_fuel_consumption_kml": 0.0,
@@ -233,7 +304,7 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
             for output in outputs
             if output["sheet_id"] == "np_coolant_temperature_high"
         )
-        self.assertEqual(coolant.iloc[0]["Coolant_temperature_high_104_seconds"], "00:04:00")
+        self.assertEqual(coolant.iloc[0]["Coolant_temperature_high_104_seconds"], 240.0)
 
 
 class Statistics403ConfigurationTest(unittest.TestCase):

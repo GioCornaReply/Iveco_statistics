@@ -102,17 +102,18 @@ VARIABLE_DISPLAY_NAMES = {
     "engineoverspeed_pct": "Engine overspeed [%]",
     "crank_100km_pct": "Average crank per 100 km [%]",
     "engine_on_time": "Engine on time [h]",
+    "engine_life_cycle": "Engine Life Cycle [%]",
     "engine_overspeed_2600_rpm_seconds": "Engine overspeed > 2660 rpm [s]",
     "post_catalyst_temperature_860_minutes": "Post-Catalyst temperature > 860 C [min]",
     "cat_eff_minutes": "Low Catalyst Efficiency time [min]",
     "cat_eff_counter": "Low Catalyst Efficiency events [count]",
-    "coolant_temperature_high_104_seconds": "Coolant temperature > 104 C [hh:mm:ss]",
+    "coolant_temperature_high_104_seconds": "High engine coolant temperature > 104 C [s]",
     "coolant_temperature_high_104_counter": "Coolant temperature > 104 C events [count]",
-    "high_oil_temperature_120_seconds": "Oil temperature > 120 C [hh:mm:ss]",
+    "high_oil_temperature_120_seconds": "High oil temperature > 120 C [s]",
     "high_oil_temperature_120_counter": "Oil temperature > 120 C events [count]",
-    "high_boost_pressure_seconds": "High boost pressure [hh:mm:ss]",
+    "high_boost_pressure_minutes": "High boost pressure > 2.5 bar [min]",
     "high_boost_pressure_counter": "High boost pressure events [count]",
-    "low_ambient_pressure_seconds": "Low ambient pressure [hh:mm:ss]",
+    "low_ambient_pressure_seconds": "Low ambient pressure < 850 mbar [s]",
     "low_ambient_pressure_counter": "Low ambient pressure events [count]",
     "region1_coolantt": "Not optimal coolant temperature [102-107 C]",
     "region2_coolantt": "Critical coolant temperature [>107 C]",
@@ -349,6 +350,9 @@ REPORT_SHEET_CONFIG = {
         "allowed_group_values": {
             "Average_vehicle_speed_split": ["<20 km/h", "20-40 km/h"],
         },
+        "required_group_values": {
+            "Average_vehicle_speed_split": ["<20 km/h", "20-40 km/h"],
+        },
         "trigger": 0,
         "zero_as_null": True,
     },
@@ -508,12 +512,12 @@ REPORT_SHEET_CONFIG = {
         ],
     },
     "np_engine_lifecycle": {
-        "name": "Engine Lifecycle",
+        "name": "Engine Life Cycle [%]",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["Engine_on_time"]},
-        "group_by": ["product_model"],
+        "series": {NP_403_SERIES: ["engine_life_cycle"]},
+        "group_by": ["engine_model", "mileage_range"],
         "trigger": 0,
-        "zero_as_null": True,
+        "zero_as_null": False,
     },
     "np_engine_overspeed": {
         "name": "Engine Overspeed [s]",
@@ -535,7 +539,7 @@ REPORT_SHEET_CONFIG = {
         "name": "Low Catalyst Efficiency",
         "use_percentage_columns": False,
         "series": {NP_403_SERIES: ["Cat_Eff_minutes", "Cat_Eff_Counter"]},
-        "group_by": ["engine_model"],
+        "group_by": ["engine_model", "mileage_range"],
         "triggers": [1, 1],
         "zero_as_null": False,
     },
@@ -543,57 +547,41 @@ REPORT_SHEET_CONFIG = {
         "name": "Coolant Temperature >104 C",
         "use_percentage_columns": False,
         "series": {
-            NP_403_SERIES: [
-                "Coolant_temperature_high_104_seconds",
-                "Coolant_temperature_high_104_counter",
-            ]
+            NP_403_SERIES: ["Coolant_temperature_high_104_seconds"]
         },
         "group_by": ["engine_model"],
-        "triggers": [1, 1],
+        "triggers": [1],
         "zero_as_null": False,
-        "duration_columns": ["Coolant_temperature_high_104_seconds"],
     },
     "np_oil_temperature_high": {
         "name": "Oil Temperature >120 C",
         "use_percentage_columns": False,
         "series": {
-            NP_403_SERIES: [
-                "High_oil_temperature_120_seconds",
-                "High_oil_temperature_120_counter",
-            ]
+            NP_403_SERIES: ["High_oil_temperature_120_seconds"]
         },
         "group_by": ["engine_model"],
-        "triggers": [1, 1],
+        "triggers": [1],
         "zero_as_null": False,
-        "duration_columns": ["High_oil_temperature_120_seconds"],
     },
     "np_boost_pressure_high": {
         "name": "High Boost Pressure",
         "use_percentage_columns": False,
         "series": {
-            NP_403_SERIES: [
-                "High_boost_pressure_seconds",
-                "High_boost_pressure_counter",
-            ]
+            NP_403_SERIES: ["High_boost_pressure_minutes"]
         },
         "group_by": ["engine_model"],
-        "triggers": [1, 1],
+        "triggers": [1],
         "zero_as_null": False,
-        "duration_columns": ["High_boost_pressure_seconds"],
     },
     "np_ambient_pressure_low": {
         "name": "Low Ambient Pressure",
         "use_percentage_columns": False,
         "series": {
-            NP_403_SERIES: [
-                "Low_ambient_pressure_seconds",
-                "Low_ambient_pressure_counter",
-            ]
+            NP_403_SERIES: ["Low_ambient_pressure_seconds"]
         },
         "group_by": ["engine_model"],
-        "triggers": [1, 1],
+        "triggers": [1],
         "zero_as_null": False,
-        "duration_columns": ["Low_ambient_pressure_seconds"],
     },
     "np_2a": {
         "name": "2a) Engine coolant temperature",
@@ -630,7 +618,7 @@ REPORT_SHEET_CONFIG = {
                 "reg3_gas_railpressure",
             ]
         },
-        "group_by": ["engine_model"],
+        "group_by": ["engine_model", "mileage_range"],
         "triggers": [1, 1, 0],
     },
     "np_3f": {
@@ -642,7 +630,7 @@ REPORT_SHEET_CONFIG = {
                 "reg3_Mixture_selfpoor",
             ]
         },
-        "group_by": ["engine_model"],
+        "group_by": ["engine_model", "mileage_range"],
         "triggers": [0, 1, 1],
     },
     "np_3g": {
@@ -654,13 +642,13 @@ REPORT_SHEET_CONFIG = {
                 "reg3_Mixture_selfrich",
             ]
         },
-        "group_by": ["engine_model"],
+        "group_by": ["engine_model", "mileage_range"],
         "triggers": [1, 1, 0],
     },
     "np_4d": {
         "name": "4d) Catalyst Efficiency",
         "series": {NP_403_SERIES: ["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"]},
-        "group_by": ["engine_model"],
+        "group_by": ["engine_model", "mileage_range"],
         "triggers": [0, 1, 1],
     },
     "np_5c": {
@@ -1185,6 +1173,7 @@ def get_sheet_settings(sheet_id):
         "scale": conf.get("scale", 1),
         "allowed_group_values": conf.get("allowed_group_values", {}),
         "duration_columns": conf.get("duration_columns", []),
+        "required_group_values": conf.get("required_group_values", {}),
     }
 
 

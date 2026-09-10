@@ -39,6 +39,10 @@ def keep_latest_record_per_vin(
     timestamp_candidates=("udt_timestamp", "easy_timestamp", "utc_datetime"),
 ) -> DataFrame:
     """Mantiene solo il record piu' aggiornato per ogni VIN."""
+    # Per la 403 NP i record catastroficamente corrotti vanno rimossi prima
+    # del ranking, cosi' un update storico valido dello stesso VIN resta usabile.
+    df = exclude_corrupt_statistics_rows(df)
+
     if vin_col not in df.columns:
         raise ValueError(f"Colonna VIN non trovata: {vin_col}")
 
@@ -66,6 +70,8 @@ def apply_statistics_quality_filters(df: DataFrame, max_data_age_days: int = 366
     standard. I record senza mileage, engine-hours o timestamp validi vengono
     esclusi quando la rispettiva sorgente e' disponibile nel dataset.
     """
+    # La stessa protezione si applica anche quando la deduplica VIN e' disattivata.
+    df = exclude_corrupt_statistics_rows(df)
     df = _coalesce_legacy_statistics_columns(df)
 
     metric_ranges = {
@@ -117,6 +123,84 @@ def apply_statistics_quality_filters(df: DataFrame, max_data_age_days: int = 366
         )
 
     return df
+
+
+def _np_403_scope(df: DataFrame):
+    """Identifica le righe Statistics 403 NP senza coinvolgere le altre serie."""
+    scope = F.lit(False)
+    id_config = _find_column_case_insensitive(df, "id_config")
+    if id_config is not None:
+        scope = scope | F.coalesce(
+            F.col(f"`{id_config}`").cast("int") == F.lit(403), F.lit(False)
+        )
+
+    product_series = _find_column_case_insensitive(df, "product_series")
+    if product_series is not None:
+        normalized = F.upper(F.col(f"`{product_series}`").cast("string"))
+        scope = scope | F.coalesce(
+            normalized.contains("NP")
+            & (
+                normalized.contains("MY 2024")
+                | normalized.contains("MY_2024")
+                | normalized.contains("MY24")
+            ),
+            F.lit(False),
+        )
+
+    return scope
+
+
+def _domain_violation(df: DataFrame, column_name: str, invalid_condition_builder):
+    """Restituisce 1 soltanto quando una metrica presente viola il suo dominio."""
+    actual_name = _find_column_case_insensitive(df, column_name)
+    if actual_name is None:
+        return F.lit(0)
+    value = F.col(f"`{actual_name}`").cast("double")
+    return F.when(value.isNotNull() & invalid_condition_builder(value), F.lit(1)).otherwise(F.lit(0))
+
+
+def exclude_corrupt_statistics_rows(df: DataFrame, minimum_violations: int = 2) -> DataFrame:
+    """Scarta record 403 NP corrotti su piu' metriche indipendenti.
+
+    Una singola metrica fuori dominio viene gestita dai filtri metrici senza
+    eliminare il veicolo. Due o piu' violazioni indicano invece un payload
+    corrotto (per esempio i valori sentinella ripetuti del VIN noto).
+    """
+    scope = _np_403_scope(df)
+    violations = [
+        _domain_violation(df, "Average_vehicle_speed", lambda value: (value <= 0) | (value > 80)),
+        _domain_violation(df, "Average_enginespeed", lambda value: (value < 200) | (value > 4000)),
+        _domain_violation(df, "avgcrank_100km", lambda value: (value < 0) | (value > 100)),
+        _domain_violation(df, "Average_start", lambda value: (value <= 0) | (value > 1000)),
+    ]
+
+    overspeed_name = _find_column_case_insensitive(df, "engineoverspeed")
+    enginehours_name = _find_column_case_insensitive(df, "enginehours")
+    if enginehours_name is None:
+        enginehours_name = _find_column_case_insensitive(df, "TotEngineHours")
+    if enginehours_name is None:
+        enginehours_name = _find_column_case_insensitive(df, "tot_eng_hours")
+
+    if overspeed_name is not None:
+        overspeed = F.col(f"`{overspeed_name}`").cast("double")
+        invalid_overspeed = (overspeed < 0) | (overspeed >= 50000000)
+        if enginehours_name is not None:
+            enginehours = F.col(f"`{enginehours_name}`").cast("double")
+            invalid_overspeed = invalid_overspeed | (
+                enginehours.isNotNull()
+                & (enginehours > 0)
+                & (overspeed > enginehours * F.lit(3600.0))
+            )
+        violations.append(
+            F.when(overspeed.isNotNull() & invalid_overspeed, F.lit(1)).otherwise(F.lit(0))
+        )
+
+    violation_count = sum(violations, F.lit(0))
+    return (
+        df.withColumn("_quality_violation_count", violation_count)
+        .filter((~scope) | (F.col("_quality_violation_count") < F.lit(minimum_violations)))
+        .drop("_quality_violation_count")
+    )
 
 
 def _coalesce_legacy_statistics_columns(df: DataFrame) -> DataFrame:
@@ -247,7 +331,7 @@ def add_np_403_calculated_features(df: DataFrame) -> DataFrame:
         ("Cat_Eff_Timer", "Cat_Eff_minutes", 1.0 / 60.0),
         ("Coolant_temperature_high_104_timer", "Coolant_temperature_high_104_seconds", 1.0),
         ("High_oil_temperature_120_timer", "High_oil_temperature_120_seconds", 1.0),
-        ("High_boost_pressure_timer", "High_boost_pressure_seconds", 1.0),
+        ("High_boost_pressure_timer", "High_boost_pressure_minutes", 1.0 / 60.0),
         ("Low_ambient_pressure_timer", "Low_ambient_pressure_seconds", 1.0),
     )
     for source_name, target_name, scale in duration_columns:
@@ -267,6 +351,15 @@ def add_np_403_calculated_features(df: DataFrame) -> DataFrame:
         source_column = _find_column_case_insensitive(df, target_name)
         if source_column is not None:
             df = df.withColumn(target_name, F.col(f"`{source_column}`").cast("double"))
+
+    mileage_column = _find_column_case_insensitive(df, "mileage")
+    if mileage_column is not None:
+        mileage = F.col(f"`{mileage_column}`").cast("double")
+        lifecycle = F.lit(100.0) - mileage / F.lit(10000.0)
+        df = df.withColumn(
+            "engine_life_cycle",
+            F.when(lifecycle.between(0.0, 100.0), F.round(lifecycle, 2)),
+        )
 
     return df
 

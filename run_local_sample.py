@@ -253,8 +253,39 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
         target_columns=settings["target_columns"],
     )
     if df_pivot is not None:
+        df_pivot = ensure_required_group_rows(
+            df_pivot,
+            settings["required_group_values"],
+        )
         df_pivot = format_duration_statistics(df_pivot, settings["duration_columns"])
     return df_pivot, validation_entry.get("sheet_name", settings["name"])
+
+
+def ensure_required_group_rows(df, required_group_values):
+    """Aggiunge categorie di report richieste anche quando non hanno osservazioni."""
+    if not required_group_values:
+        return df
+
+    result = df.copy()
+    for group_column, required_values in required_group_values.items():
+        if group_column not in result.columns:
+            continue
+        observed = set(result[group_column].dropna().tolist())
+        missing_values = [value for value in required_values if value not in observed]
+        if not missing_values:
+            continue
+
+        rows = []
+        for value in missing_values:
+            row = {column_name: None for column_name in result.columns}
+            row[group_column] = value
+            for column_name in result.columns:
+                if str(column_name).lower().startswith("count_"):
+                    row[column_name] = 0
+            rows.append(row)
+        result = pd.concat([result, pd.DataFrame(rows, columns=result.columns)], ignore_index=True)
+
+    return result
 
 
 def format_seconds_as_hhmmss(value):
