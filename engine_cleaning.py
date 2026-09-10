@@ -324,20 +324,38 @@ def _duration_seconds(column_name: str):
 
 
 def add_np_403_calculated_features(df: DataFrame) -> DataFrame:
-    """Normalizza timer/counter MY24 NP nelle unita' richieste dal report 403."""
-    duration_columns = (
-        ("Engine_overspeed_2600_rpm_Timer", "Engine_overspeed_2600_rpm_seconds", 1.0),
-        ("Post_Catalyst_temperature_860_timer", "Post_Catalyst_temperature_860_minutes", 1.0 / 60.0),
-        ("Cat_Eff_Timer", "Cat_Eff_minutes", 1.0 / 60.0),
-        ("Coolant_temperature_high_104_timer", "Coolant_temperature_high_104_seconds", 1.0),
-        ("High_oil_temperature_120_timer", "High_oil_temperature_120_seconds", 1.0),
-        ("High_boost_pressure_timer", "High_boost_pressure_minutes", 1.0 / 60.0),
-        ("Low_ambient_pressure_timer", "Low_ambient_pressure_seconds", 1.0),
+    """Espone i calculated NP 403 finali, con fallback sui timer grezzi."""
+    duration_features = (
+        ("engineoverspeed", "Engine_overspeed_2600_rpm_Timer", 1.0),
+        ("Catalyst_temp_860", "Post_Catalyst_temperature_860_timer", 1.0 / 60.0),
+        ("Low_Cat_Eff_time", "Cat_Eff_Timer", 1.0 / 60.0),
+        ("Coolant_temp_high_104", "Coolant_temperature_high_104_timer", 1.0),
+        ("Oil_temp_high_120", "High_oil_temperature_120_timer", 1.0),
+        ("Boost_pressure_high_25", "High_boost_pressure_timer", 1.0 / 60.0),
+        ("Ambient_pressure_low_850", "Low_ambient_pressure_timer", 1.0),
     )
-    for source_name, target_name, scale in duration_columns:
+    for target_name, source_name, scale in duration_features:
+        values = []
+        target_column = _find_column_case_insensitive(df, target_name)
+        if target_column is not None:
+            values.append(F.col(f"`{target_column}`").cast("double"))
+
         source_column = _find_column_case_insensitive(df, source_name)
         if source_column is not None:
-            df = df.withColumn(target_name, _duration_seconds(source_column) * F.lit(scale))
+            values.append(_duration_seconds(source_column) * F.lit(scale))
+
+        if values:
+            df = df.withColumn(target_name, F.coalesce(*values))
+
+    count_values = []
+    final_count_column = _find_column_case_insensitive(df, "Low_Cat_Eff_count")
+    if final_count_column is not None:
+        count_values.append(F.col(f"`{final_count_column}`").cast("double"))
+    raw_count_column = _find_column_case_insensitive(df, "Cat_Eff_Counter")
+    if raw_count_column is not None:
+        count_values.append(F.col(f"`{raw_count_column}`").cast("double"))
+    if count_values:
+        df = df.withColumn("Low_Cat_Eff_count", F.coalesce(*count_values))
 
     numeric_columns = (
         "Engine_on_time",
@@ -352,13 +370,22 @@ def add_np_403_calculated_features(df: DataFrame) -> DataFrame:
         if source_column is not None:
             df = df.withColumn(target_name, F.col(f"`{source_column}`").cast("double"))
 
+    lifecycle_values = []
+    lifecycle_column = _find_column_case_insensitive(df, "engine_life_cycle")
+    if lifecycle_column is not None:
+        lifecycle = F.col(f"`{lifecycle_column}`").cast("double")
+        lifecycle_values.append(F.when(lifecycle.between(0.0, 100.0), lifecycle))
+
     mileage_column = _find_column_case_insensitive(df, "mileage")
     if mileage_column is not None:
         mileage = F.col(f"`{mileage_column}`").cast("double")
         lifecycle = F.lit(100.0) - mileage / F.lit(10000.0)
+        lifecycle_values.append(F.when(lifecycle.between(0.0, 100.0), lifecycle))
+
+    if lifecycle_values:
         df = df.withColumn(
             "engine_life_cycle",
-            F.when(lifecycle.between(0.0, 100.0), F.round(lifecycle, 2)),
+            F.round(F.coalesce(*lifecycle_values), 2),
         )
 
     return df

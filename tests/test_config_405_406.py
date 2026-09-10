@@ -195,7 +195,7 @@ class Config405406Test(unittest.TestCase):
         )
         self.assertEqual(
             get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", "np_engine_overspeed"),
-            ["Engine_overspeed_2600_rpm_seconds"],
+            ["engineoverspeed"],
         )
         for sheet_id in ("average_crank_per_100km", "average_crank_per_100km_2"):
             settings = get_sheet_settings(sheet_id)
@@ -240,7 +240,7 @@ class Config405406Test(unittest.TestCase):
         )
         self.assertEqual(
             get_columns_for_sheet(series, group, "np_low_catalyst_efficiency"),
-            ["Cat_Eff_minutes", "Cat_Eff_Counter"],
+            ["Low_Cat_Eff_time", "Low_Cat_Eff_count"],
         )
         self.assertEqual(
             get_sheet_settings("np_average_vehicle_speed")["allowed_group_values"],
@@ -260,10 +260,11 @@ class Config405406Test(unittest.TestCase):
         )
 
         calculated_columns = {
-            "np_coolant_temperature_high": ["Coolant_temperature_high_104_seconds"],
-            "np_oil_temperature_high": ["High_oil_temperature_120_seconds"],
-            "np_boost_pressure_high": ["High_boost_pressure_minutes"],
-            "np_ambient_pressure_low": ["Low_ambient_pressure_seconds"],
+            "np_catalyst_temperature": ["Catalyst_temp_860"],
+            "np_coolant_temperature_high": ["Coolant_temp_high_104"],
+            "np_oil_temperature_high": ["Oil_temp_high_120"],
+            "np_boost_pressure_high": ["Boost_pressure_high_25"],
+            "np_ambient_pressure_low": ["Ambient_pressure_low_850"],
         }
         for sheet_id, columns in calculated_columns.items():
             self.assertEqual(get_columns_for_sheet(series, group, sheet_id), columns)
@@ -274,6 +275,20 @@ class Config405406Test(unittest.TestCase):
                 get_sheet_settings(sheet_id)["group_by"],
                 ["engine_model", "mileage_range"],
             )
+
+        expected_names = {
+            "np_engine_lifecycle": "Engine Life Cycle (%)",
+            "np_engine_overspeed": "Engine overspeed >2660 rpm",
+            "np_catalyst_temperature": "Catalyst temperature >860 C",
+            "np_low_catalyst_efficiency": "Low Catalyst Efficiency",
+            "np_coolant_temperature_high": "High coolant temp >104 C",
+            "np_oil_temperature_high": "High oil temp >120 C",
+            "np_boost_pressure_high": "High boost pressure >2.5 bar",
+            "np_ambient_pressure_low": "Low ambient pressure <850 mbar",
+        }
+        for sheet_id, expected_name in expected_names.items():
+            self.assertEqual(get_sheet_settings(sheet_id)["name"], expected_name)
+            self.assertLessEqual(len(expected_name), 31)
 
     def test_sheet_names_follow_latest_catalog_with_excel_safe_abbreviations(self):
         expected_names = {

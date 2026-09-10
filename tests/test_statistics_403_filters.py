@@ -118,14 +118,26 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
 
         self.assertEqual(row.Engine_on_time, 12.5)
         self.assertEqual(row.engine_life_cycle, 75.0)
-        self.assertEqual(row.Engine_overspeed_2600_rpm_seconds, 3723.0)
-        self.assertEqual(row.Post_Catalyst_temperature_860_minutes, 2.0)
-        self.assertEqual(row.Cat_Eff_minutes, 3.0)
-        self.assertEqual(row.Coolant_temperature_high_104_seconds, 90000.0)
-        self.assertEqual(row.High_oil_temperature_120_seconds, 30.0)
-        self.assertEqual(row.High_boost_pressure_minutes, 10.0)
-        self.assertEqual(row.Low_ambient_pressure_seconds, 1200.0)
+        self.assertEqual(row.engineoverspeed, 3723.0)
+        self.assertEqual(row.Catalyst_temp_860, 2.0)
+        self.assertEqual(row.Low_Cat_Eff_time, 3.0)
+        self.assertEqual(row.Low_Cat_Eff_count, 4.0)
+        self.assertEqual(row.Coolant_temp_high_104, 90000.0)
+        self.assertEqual(row.Oil_temp_high_120, 30.0)
+        self.assertEqual(row.Boost_pressure_high_25, 10.0)
+        self.assertEqual(row.Ambient_pressure_low_850, 1200.0)
         self.assertEqual(row.High_boost_pressure_counter, 7.0)
+
+    def test_np_final_calculated_values_take_priority_over_raw_timers(self):
+        df = self.spark.createDataFrame(
+            [(5.0, "00:10:00", 2.0, "9")],
+            ["Boost_pressure_high_25", "High_boost_pressure_timer", "Low_Cat_Eff_count", "Cat_Eff_Counter"],
+        )
+
+        row = add_np_403_calculated_features(df).first()
+
+        self.assertEqual(row.Boost_pressure_high_25, 5.0)
+        self.assertEqual(row.Low_Cat_Eff_count, 2.0)
 
     def test_np_vehicle_speed_excludes_over_40_and_adds_missing_under_20_band(self):
         df = self.spark.createDataFrame(
@@ -259,19 +271,15 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
             "Average_vehicle_speed_split": "20-40 km/h",
             "Average_vehicle_speed": 30.0,
             "average_fuel_consumption_kml": 0.0,
-            "Engine_on_time": "10",
-            "Engine_overspeed_2600_rpm_Timer": "00:00:30",
-            "Post_Catalyst_temperature_860_timer": "00:02:00",
-            "Cat_Eff_Timer": "00:03:00",
-            "Cat_Eff_Counter": "2",
-            "Coolant_temperature_high_104_timer": "00:04:00",
-            "Coolant_temperature_high_104_counter": "3",
-            "High_oil_temperature_120_timer": "00:05:00",
-            "High_oil_temperature_120_counter": "4",
-            "High_boost_pressure_timer": "00:06:00",
-            "High_boost_pressure_counter": "5",
-            "Low_ambient_pressure_timer": "00:07:00",
-            "Low_ambient_pressure_counter": "6",
+            "engine_life_cycle": 75.0,
+            "engineoverspeed": 30.0,
+            "Catalyst_temp_860": 0.0,
+            "Low_Cat_Eff_time": 0.0,
+            "Low_Cat_Eff_count": 0.0,
+            "Coolant_temp_high_104": 240.0,
+            "Oil_temp_high_120": 0.0,
+            "Boost_pressure_high_25": 6.0,
+            "Ambient_pressure_low_850": 0.0,
         }
         for column_name in (
             "region1_coolantT", "region2_coolantT",
@@ -304,7 +312,7 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
             for output in outputs
             if output["sheet_id"] == "np_coolant_temperature_high"
         )
-        self.assertEqual(coolant.iloc[0]["Coolant_temperature_high_104_seconds"], 240.0)
+        self.assertEqual(coolant.iloc[0]["Coolant_temp_high_104"], 240.0)
 
 
 class Statistics403ConfigurationTest(unittest.TestCase):

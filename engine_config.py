@@ -103,6 +103,14 @@ VARIABLE_DISPLAY_NAMES = {
     "crank_100km_pct": "Average crank per 100 km [%]",
     "engine_on_time": "Engine on time [h]",
     "engine_life_cycle": "Engine Life Cycle [%]",
+    "engineoverspeed": "Engine overspeed > 2660 rpm [s]",
+    "catalyst_temp_860": "Catalyst temperature > 860 C [min]",
+    "low_cat_eff_time": "Time with Low Catalyst Efficiency [min]",
+    "low_cat_eff_count": "Low Catalyst Efficiency events [count]",
+    "coolant_temp_high_104": "High engine coolant temperature > 104 C [s]",
+    "oil_temp_high_120": "High oil temperature > 120 C [s]",
+    "boost_pressure_high_25": "High boost pressure > 2.5 bar [min]",
+    "ambient_pressure_low_850": "Low ambient pressure < 850 mbar [s]",
     "engine_overspeed_2600_rpm_seconds": "Engine overspeed > 2660 rpm [s]",
     "post_catalyst_temperature_860_minutes": "Post-Catalyst temperature > 860 C [min]",
     "cat_eff_minutes": "Low Catalyst Efficiency time [min]",
@@ -512,7 +520,7 @@ REPORT_SHEET_CONFIG = {
         ],
     },
     "np_engine_lifecycle": {
-        "name": "Engine Life Cycle [%]",
+        "name": "Engine Life Cycle (%)",
         "use_percentage_columns": False,
         "series": {NP_403_SERIES: ["engine_life_cycle"]},
         "group_by": ["engine_model", "mileage_range"],
@@ -520,17 +528,17 @@ REPORT_SHEET_CONFIG = {
         "zero_as_null": False,
     },
     "np_engine_overspeed": {
-        "name": "Engine Overspeed [s]",
+        "name": "Engine overspeed >2660 rpm",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["Engine_overspeed_2600_rpm_seconds"]},
+        "series": {NP_403_SERIES: ["engineoverspeed"]},
         "group_by": ["engine_model"],
         "trigger": 1,
         "zero_as_null": False,
     },
     "np_catalyst_temperature": {
-        "name": "Catalyst Temperature [min]",
+        "name": "Catalyst temperature >860 C",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["Post_Catalyst_temperature_860_minutes"]},
+        "series": {NP_403_SERIES: ["Catalyst_temp_860"]},
         "group_by": ["engine_model"],
         "trigger": 1,
         "zero_as_null": False,
@@ -538,46 +546,46 @@ REPORT_SHEET_CONFIG = {
     "np_low_catalyst_efficiency": {
         "name": "Low Catalyst Efficiency",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["Cat_Eff_minutes", "Cat_Eff_Counter"]},
+        "series": {NP_403_SERIES: ["Low_Cat_Eff_time", "Low_Cat_Eff_count"]},
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [1, 1],
         "zero_as_null": False,
     },
     "np_coolant_temperature_high": {
-        "name": "Coolant Temperature >104 C",
+        "name": "High coolant temp >104 C",
         "use_percentage_columns": False,
         "series": {
-            NP_403_SERIES: ["Coolant_temperature_high_104_seconds"]
+            NP_403_SERIES: ["Coolant_temp_high_104"]
         },
         "group_by": ["engine_model"],
         "triggers": [1],
         "zero_as_null": False,
     },
     "np_oil_temperature_high": {
-        "name": "Oil Temperature >120 C",
+        "name": "High oil temp >120 C",
         "use_percentage_columns": False,
         "series": {
-            NP_403_SERIES: ["High_oil_temperature_120_seconds"]
+            NP_403_SERIES: ["Oil_temp_high_120"]
         },
         "group_by": ["engine_model"],
         "triggers": [1],
         "zero_as_null": False,
     },
     "np_boost_pressure_high": {
-        "name": "High Boost Pressure",
+        "name": "High boost pressure >2.5 bar",
         "use_percentage_columns": False,
         "series": {
-            NP_403_SERIES: ["High_boost_pressure_minutes"]
+            NP_403_SERIES: ["Boost_pressure_high_25"]
         },
         "group_by": ["engine_model"],
         "triggers": [1],
         "zero_as_null": False,
     },
     "np_ambient_pressure_low": {
-        "name": "Low Ambient Pressure",
+        "name": "Low ambient pressure <850 mbar",
         "use_percentage_columns": False,
         "series": {
-            NP_403_SERIES: ["Low_ambient_pressure_seconds"]
+            NP_403_SERIES: ["Ambient_pressure_low_850"]
         },
         "group_by": ["engine_model"],
         "triggers": [1],
