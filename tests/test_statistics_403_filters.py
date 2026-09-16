@@ -128,6 +128,18 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
         self.assertEqual(row.Ambient_pressure_low_850, 1200.0)
         self.assertEqual(row.High_boost_pressure_counter, 7.0)
 
+    def test_coverage_driven_length_is_normalized_to_kilometers(self):
+        df = self.spark.createDataFrame(
+            [(20_000_000.0,)],
+            ["coverage_driven_length"],
+        )
+
+        row = add_legacy_preparation_features(df).first()
+
+        self.assertEqual(row.mileage, 20_000.0)
+        self.assertEqual(row.mileage_range, "10k-100k km")
+        self.assertEqual(row.engine_life_cycle, 98.0)
+
     def test_np_final_calculated_values_take_priority_over_raw_timers(self):
         df = self.spark.createDataFrame(
             [(5.0, "00:10:00", 2.0, "9")],

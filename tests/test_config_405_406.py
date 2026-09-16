@@ -258,6 +258,14 @@ class Config405406Test(unittest.TestCase):
             get_sheet_settings("np_low_catalyst_efficiency")["group_by"],
             ["engine_model", "mileage_range"],
         )
+        self.assertEqual(
+            get_sheet_settings("np_coolant_temperature_high")["group_by"],
+            ["engine_model", "mileage_range"],
+        )
+        self.assertEqual(
+            get_sheet_settings("np_oil_temperature_high")["group_by"],
+            ["engine_model", "mileage_range"],
+        )
 
         calculated_columns = {
             "np_catalyst_temperature": ["Catalyst_temp_860"],
@@ -289,6 +297,31 @@ class Config405406Test(unittest.TestCase):
         for sheet_id, expected_name in expected_names.items():
             self.assertEqual(get_sheet_settings(sheet_id)["name"], expected_name)
             self.assertLessEqual(len(expected_name), 31)
+
+    def test_403_uses_separate_lng_and_cng_fuel_sheets(self):
+        series = "S_WAY_NP_MY_2024"
+        group = "IVECO_S_X_WAY_NP"
+
+        self.assertEqual(
+            get_columns_for_sheet(series, group, "fuel_lng"),
+            [
+                "average_fuel_consumption_kml",
+                "average_fuel_consumption_l100km",
+                "Tot_fuel_LNG",
+            ],
+        )
+        self.assertEqual(
+            get_columns_for_sheet(series, group, "fuel_cng"),
+            [
+                "average_fuel_consumption_CNG_kml",
+                "average_fuel_consumption_CNG_l100km",
+                "Tot_fuel_CNG",
+            ],
+        )
+        self.assertEqual(get_sheet_settings("fuel_lng")["name"], "Fuel Consumption LNG")
+        self.assertEqual(get_sheet_settings("fuel_cng")["name"], "Fuel Consumption CNG")
+        self.assertEqual(get_columns_for_sheet(series, group, "fuel_consumption"), [])
+        self.assertEqual(get_columns_for_sheet(series, group, "fuel_consumption_2"), [])
 
     def test_sheet_names_follow_latest_catalog_with_excel_safe_abbreviations(self):
         expected_names = {

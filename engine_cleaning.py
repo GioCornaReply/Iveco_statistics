@@ -6,6 +6,8 @@ import pyspark.sql.functions as F
 from pyspark.sql.window import Window
 import re
 
+COVERAGE_DRIVEN_LENGTH_TO_KM = 1000.0
+
 def clean_spark_column_names(df: DataFrame) -> DataFrame:
     """
     Rinomina le colonne sostituendo caratteri speciali (punti, spazi, parentesi)
@@ -207,25 +209,37 @@ def _coalesce_legacy_statistics_columns(df: DataFrame) -> DataFrame:
     """Espone le colonne canoniche senza perdere le varianti originali."""
     variants = {
         "enginehours": ("enginehours", "TotEngineHours", "tot_eng_hours"),
-        "mileage": ("mileage", "cov_div_len"),
+        "mileage": ("mileage", "cov_div_len", "coverage_driven_length"),
         "udt_timestamp": ("udt_timestamp", "easy_timestamp", "utc_datetime"),
         "crank_100km": ("crank_100km", "avgcrank_100km"),
     }
     for canonical, candidates in variants.items():
-        present = [column for column in candidates if column in df.columns]
-        if not present:
+        expressions = []
+        for candidate in candidates:
+            actual = next(
+                (column for column in df.columns if column.lower() == candidate.lower()),
+                None,
+            )
+            if actual is None:
+                continue
+
+            expression = F.col(f"`{actual}`")
+            if canonical == "mileage" and candidate == "coverage_driven_length":
+                expression = expression.cast("double") / F.lit(COVERAGE_DRIVEN_LENGTH_TO_KM)
+            expressions.append(expression)
+
+        if not expressions:
             continue
-        df = df.withColumn(canonical, F.coalesce(*[F.col(column) for column in present]))
+        df = df.withColumn(canonical, F.coalesce(*expressions))
     return df
 
 
 def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
     """Ricrea localmente alcune colonne prodotte dal vecchio notebook Prep."""
+    df = _coalesce_legacy_statistics_columns(df)
+
     if "product_model" in df.columns:
         df = engine_model_standard(df)
-
-    if "mileage" not in df.columns and "cov_div_len" in df.columns:
-        df = df.withColumn("mileage", F.col("cov_div_len"))
 
     if "Average_vehicle_speed" in df.columns:
         speed = F.col("Average_vehicle_speed").cast("double")

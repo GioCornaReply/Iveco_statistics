@@ -23,6 +23,8 @@ SHEET_ALIASES = {
 DEFAULT_REPORT_SHEETS = [
     "complete_dataset",
     "urea_consumption_pct",
+    "fuel_lng",
+    "fuel_cng",
     "fuel_consumption",
     "fuel_consumption_2",
     "urea_consumption_l100km",
@@ -111,6 +113,12 @@ VARIABLE_DISPLAY_NAMES = {
     "oil_temp_high_120": "High oil temperature > 120 C [s]",
     "boost_pressure_high_25": "High boost pressure > 2.5 bar [min]",
     "ambient_pressure_low_850": "Low ambient pressure < 850 mbar [s]",
+    "average_fuel_consumption_kml": "Average fuel consumption LNG [km/l]",
+    "average_fuel_consumption_l100km": "Average fuel consumption LNG [l/100km]",
+    "tot_fuel_lng": "Total fuel consumption LNG [l]",
+    "average_fuel_consumption_cng_kml": "Average fuel consumption CNG [km/l]",
+    "average_fuel_consumption_cng_l100km": "Average fuel consumption CNG [l/100km]",
+    "tot_fuel_cng": "Total fuel consumption CNG [l]",
     "engine_overspeed_2600_rpm_seconds": "Engine overspeed > 2660 rpm [s]",
     "post_catalyst_temperature_860_minutes": "Post-Catalyst temperature > 860 C [min]",
     "cat_eff_minutes": "Low Catalyst Efficiency time [min]",
@@ -314,6 +322,7 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["product_model", "power", "axle_description", "mission"],
         "trigger": 0,
         "zero_as_null": True,
+        "skip_series": {NP_403_SERIES},
     },
     "fuel_consumption_2": {
         "name": "Fuel Consumption 2",
@@ -321,6 +330,35 @@ REPORT_SHEET_CONFIG = {
         "columns": ["average_fuel_consumption_kml"],
         "group_by": ["product_model", "power", "axle_description", "Average_vehicle_speed_range"],
         "trigger": 0,
+        "zero_as_null": True,
+        "skip_series": {NP_403_SERIES},
+    },
+    "fuel_lng": {
+        "name": "Fuel Consumption LNG",
+        "use_percentage_columns": False,
+        "series": {
+            NP_403_SERIES: [
+                "average_fuel_consumption_kml",
+                "average_fuel_consumption_l100km",
+                "Tot_fuel_LNG",
+            ]
+        },
+        "group_by": ["product_model", "power", "axle_description", "mission"],
+        "triggers": [0, 0, 0],
+        "zero_as_null": True,
+    },
+    "fuel_cng": {
+        "name": "Fuel Consumption CNG",
+        "use_percentage_columns": False,
+        "series": {
+            NP_403_SERIES: [
+                "average_fuel_consumption_CNG_kml",
+                "average_fuel_consumption_CNG_l100km",
+                "Tot_fuel_CNG",
+            ]
+        },
+        "group_by": ["product_model", "power", "axle_description", "mission"],
+        "triggers": [0, 0, 0],
         "zero_as_null": True,
     },
     "urea_consumption_l100km": {
@@ -557,7 +595,7 @@ REPORT_SHEET_CONFIG = {
         "series": {
             NP_403_SERIES: ["Coolant_temp_high_104"]
         },
-        "group_by": ["engine_model"],
+        "group_by": ["engine_model", "mileage_range"],
         "triggers": [1],
         "zero_as_null": False,
     },
@@ -567,7 +605,7 @@ REPORT_SHEET_CONFIG = {
         "series": {
             NP_403_SERIES: ["Oil_temp_high_120"]
         },
-        "group_by": ["engine_model"],
+        "group_by": ["engine_model", "mileage_range"],
         "triggers": [1],
         "zero_as_null": False,
     },

@@ -56,6 +56,8 @@ raggruppamento, in quest'ordine:
 - `4d) Catalyst Efficiency`;
 - `Engine Life Cycle [%]`;
 - `Low Catalyst Efficiency`.
+- `High engine coolant temperature > 104 C`;
+- `High oil temperature > 120 C`.
 
 Anche se la popolazione attuale contiene soltanto Cursor 9, `engine_model`
 rimane nella configurazione per supportare motorizzazioni future.
@@ -106,6 +108,16 @@ nel Complete Dataset ma non sono inclusi nei rispettivi fogli calculated.
 I timer sorgente possono essere numerici oppure stringhe `hh:mm:ss`; vengono
 prima normalizzati in secondi e poi convertiti nell'unita' finale richiesta.
 Gli zero sono validi per timer e counter e rimangono nelle statistiche.
+
+Per la 403 i consumi sono esportati in due fogli separati: `Fuel Consumption
+LNG`, con `average_fuel_consumption_kml`, `average_fuel_consumption_l100km` e
+`Tot_fuel_LNG`, e `Fuel Consumption CNG`, con le rispettive colonne CNG. I
+fogli generici `Fuel Consumption` e `Fuel Consumption 2` restano disponibili
+per le altre configurazioni ma non vengono duplicati nell'output NP.
+
+La distanza canonica per i raggruppamenti e' `mileage`. Se non e' disponibile,
+`cov_div_len` viene usato come alias legacy; `coverage_driven_length` viene
+convertita da metri a chilometri dividendo per 1000.
 
 I nomi dei fogli calculated descrivono soglia e unita' e rispettano il limite
 Excel di 31 caratteri. In particolare `Engine Life Cycle (%)` sostituisce la
