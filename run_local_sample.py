@@ -9,6 +9,7 @@ from decimal import Decimal
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
@@ -515,8 +516,15 @@ def copy_excel_to_dbfs(
     dbutils,
     spark=None,
     dbfs_output_dir="dbfs:/FileStore/iveco_statistics_output",
+    workspace_staging_dir=None,
 ):
-    """Copia su DBFS il file Excel effettivamente generato dal notebook."""
+    """Copia su DBFS il file Excel effettivamente generato dal notebook.
+
+    Unity Catalog shared/serverless compute blocks ``dbutils.fs.cp`` from
+    arbitrary driver-local paths such as ``file:/tmp/...``.  Stage the file
+    under the current workspace first, then copy that allowed ``file:/Workspace``
+    URI to the final DBFS location.
+    """
     if excel_path is None:
         raise FileNotFoundError(
             "Nessun Excel generato: export_excel_outputs ha restituito None. "
@@ -534,9 +542,17 @@ def copy_excel_to_dbfs(
     dbfs_output_dir = dbfs_output_dir.rstrip("/")
     dbfs_excel_path = f"{dbfs_output_dir}/{local_excel_path.name}"
 
-    dbutils.fs.mkdirs(dbfs_output_dir)
-    dbutils.fs.cp(f"file:{local_excel_path.as_posix()}", dbfs_excel_path, True)
-    log_step(f"Excel copiato su DBFS: {dbfs_excel_path}")
+    staging_dir = _get_workspace_staging_dir(dbutils, workspace_staging_dir)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+    staged_excel_path = staging_dir / local_excel_path.name
+    shutil.copy2(local_excel_path, staged_excel_path)
+
+    try:
+        dbutils.fs.mkdirs(dbfs_output_dir)
+        dbutils.fs.cp(f"file:{staged_excel_path.resolve().as_posix()}", dbfs_excel_path, True)
+        log_step(f"Excel copiato su DBFS: {dbfs_excel_path}")
+    finally:
+        staged_excel_path.unlink(missing_ok=True)
 
     download_url = None
     if spark is not None:
@@ -561,6 +577,42 @@ def copy_excel_to_dbfs(
         "dbfs_path": dbfs_excel_path,
         "download_url": download_url,
     }
+
+
+def _get_workspace_staging_dir(dbutils, workspace_staging_dir=None):
+    """Return a writable workspace directory for Databricks file staging."""
+    if workspace_staging_dir is not None:
+        return Path(workspace_staging_dir)
+
+    candidates = []
+    current_dir = Path.cwd()
+    if current_dir.as_posix().startswith("/Workspace"):
+        candidates.append(current_dir)
+
+    try:
+        notebook_path = (
+            dbutils.notebook.entry_point.getDbutils()
+            .notebook()
+            .getContext()
+            .notebookPath()
+            .get()
+        )
+        notebook_path = str(notebook_path)
+        if not notebook_path.startswith("/Workspace"):
+            notebook_path = f"/Workspace/{notebook_path.lstrip('/')}"
+        candidates.append(Path(notebook_path).parent)
+    except Exception:
+        pass
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate / ".iveco_statistics_output"
+
+    raise RuntimeError(
+        "Impossibile trovare un percorso workspace per lo staging Excel. "
+        "Esegui il notebook da un Repo/cartella Workspace oppure passa "
+        "workspace_staging_dir esplicitamente."
+    )
 
 
 def ensure_excel_writer_available(auto_install=False):

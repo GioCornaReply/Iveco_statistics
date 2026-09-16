@@ -33,17 +33,24 @@ def test_copy_excel_to_dbfs_uses_generated_file_name(tmp_path):
     excel_path = tmp_path / "Statistics_HEAVY_XWAY_408_dataset.xlsx"
     excel_path.write_bytes(b"excel")
     dbutils = FakeDbutils()
+    workspace_staging_dir = tmp_path / "workspace"
 
-    result = copy_excel_to_dbfs(excel_path, dbutils, spark=FakeSpark())
+    result = copy_excel_to_dbfs(
+        excel_path,
+        dbutils,
+        spark=FakeSpark(),
+        workspace_staging_dir=workspace_staging_dir,
+    )
 
     assert dbutils.fs.mkdirs_calls == ["dbfs:/FileStore/iveco_statistics_output"]
     assert dbutils.fs.cp_calls == [
         (
-            f"file:{excel_path.resolve().as_posix()}",
+            f"file:{(workspace_staging_dir / excel_path.name).resolve().as_posix()}",
             "dbfs:/FileStore/iveco_statistics_output/Statistics_HEAVY_XWAY_408_dataset.xlsx",
             True,
         )
     ]
+    assert not (workspace_staging_dir / excel_path.name).exists()
     assert result["dbfs_path"].endswith("/Statistics_HEAVY_XWAY_408_dataset.xlsx")
     assert result["download_url"].endswith(
         "/files/iveco_statistics_output/Statistics_HEAVY_XWAY_408_dataset.xlsx"
@@ -54,22 +61,25 @@ def test_copy_excel_to_dbfs_builds_download_url_from_custom_filestore_dir(tmp_pa
     excel_path = tmp_path / "VODR_subset_56.xlsx"
     excel_path.write_bytes(b"excel")
     dbutils = FakeDbutils()
+    workspace_staging_dir = tmp_path / "workspace"
 
     result = copy_excel_to_dbfs(
         excel_path,
         dbutils,
         spark=FakeSpark(),
         dbfs_output_dir="dbfs:/FileStore/iveco_vodr_subset_output",
+        workspace_staging_dir=workspace_staging_dir,
     )
 
     assert dbutils.fs.mkdirs_calls == ["dbfs:/FileStore/iveco_vodr_subset_output"]
     assert dbutils.fs.cp_calls == [
         (
-            f"file:{excel_path.resolve().as_posix()}",
+            f"file:{(workspace_staging_dir / excel_path.name).resolve().as_posix()}",
             "dbfs:/FileStore/iveco_vodr_subset_output/VODR_subset_56.xlsx",
             True,
         )
     ]
+    assert not (workspace_staging_dir / excel_path.name).exists()
     assert result["download_url"].endswith(
         "/files/iveco_vodr_subset_output/VODR_subset_56.xlsx"
     )
