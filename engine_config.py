@@ -14,6 +14,21 @@ NEW_LAYOUT_SERIES = {
 }
 
 NP_403_SERIES = "S_WAY_NP_MY_2024"
+NP_409_SERIES = "S_WAY_AS_NP_MY22_LATAM"
+NP_409_SOURCE_SERIES = "S_WAY_AS_NP_LATAM"
+NP_409_REPORT_SERIES = (NP_409_SERIES, NP_409_SOURCE_SERIES)
+NP_REPORT_SERIES = (NP_403_SERIES, NP_409_SERIES, NP_409_SOURCE_SERIES)
+NP_409_SERIES_ALIASES = set(NP_409_REPORT_SERIES)
+
+
+def _np_series_columns(columns):
+    """Applica la stessa metrica NP alle serie MY24 e S-WAY NP LATAM."""
+    return {series: columns for series in NP_REPORT_SERIES}
+
+
+def _np_409_series_columns(columns):
+    """Mappa le colonne della serie LATAM, includendo il nome grezzo del dato."""
+    return {series: columns for series in NP_409_REPORT_SERIES}
 
 SHEET_ALIASES = {
     # Nome storico usato nel primo runner locale.
@@ -89,13 +104,16 @@ DEFAULT_REPORT_SHEETS = [
     "np_oil_temperature_high",
     "np_boost_pressure_high",
     "np_ambient_pressure_low",
+    "np_oil_pressure_low",
     "np_2a",
     "np_2b",
     "np_2c",
     "np_3a",
     "np_3c",
+    "np_3e",
     "np_3f",
     "np_3g",
+    "np_misfire_cylinders",
     "np_4d",
     "np_5c",
 ]
@@ -131,6 +149,8 @@ VARIABLE_DISPLAY_NAMES = {
     "high_boost_pressure_counter": "High boost pressure events [count]",
     "low_ambient_pressure_seconds": "Low ambient pressure < 850 mbar [s]",
     "low_ambient_pressure_counter": "Low ambient pressure events [count]",
+    "oil_pressure_low_12": "Low oil pressure <1.2 bar [min]",
+    "misfire_knocking_cylinders_min": "Misfire/Knocking Detection Cylinders (min)",
     "region1_coolantt": "Not optimal coolant temperature [102-107 C]",
     "region2_coolantt": "Critical coolant temperature [>107 C]",
     "oiltemp1": "Oil temperature OK [<120 C]",
@@ -145,6 +165,9 @@ VARIABLE_DISPLAY_NAMES = {
     "reg1_gas_railpressure": "Gas rail pressure too low [<4500 mbar]",
     "reg2_gas_railpressure": "Gas rail pressure low [4500-5500 mbar]",
     "reg3_gas_railpressure": "Gas rail pressure OK [5500-6500 mbar]",
+    "region1_etasp_railpressure": "Lng cold refill / fuel filter clogged / low gas level [800-5500 mbar]",
+    "region2_etasp_railpressure": "Fuel filter clogged / fuel line malfunction [5500-7500 mbar]",
+    "region3_etasp_railpressure": "Fuel line OK [7500-9500 mbar]",
     "reg1_mixture_selfpoor": "Mixture self-adapting poor OK [1-1.10]",
     "reg2_mixture_selfpoor": "Mixture self-adapting poor [1.10-1.15]",
     "reg3_mixture_selfpoor": "Mixture self-adapting very poor [>1.15]",
@@ -322,12 +345,17 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["product_model", "power", "axle_description", "mission"],
         "trigger": 0,
         "zero_as_null": True,
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "fuel_consumption_2": {
         "name": "Fuel Consumption 2",
+        "series_names": {
+            NP_409_SERIES: "Fuel Consumption CNG by speed",
+            NP_409_SOURCE_SERIES: "Fuel Consumption CNG by speed",
+        },
         "use_percentage_columns": False,
         "columns": ["average_fuel_consumption_kml"],
+        "series": _np_409_series_columns(["average_fuel_consumption_CNG_kml"]),
         "group_by": ["product_model", "power", "axle_description", "Average_vehicle_speed_range"],
         "trigger": 0,
         "zero_as_null": True,
@@ -350,13 +378,13 @@ REPORT_SHEET_CONFIG = {
     "fuel_cng": {
         "name": "Fuel Consumption CNG",
         "use_percentage_columns": False,
-        "series": {
-            NP_403_SERIES: [
+        "series": _np_series_columns(
+            [
                 "average_fuel_consumption_CNG_kml",
                 "average_fuel_consumption_CNG_l100km",
                 "Tot_fuel_CNG",
             ]
-        },
+        ),
         "group_by": ["product_model", "power", "axle_description", "mission"],
         "triggers": [0, 0, 0],
         "zero_as_null": True,
@@ -560,7 +588,7 @@ REPORT_SHEET_CONFIG = {
     "np_engine_lifecycle": {
         "name": "Engine Life Cycle (%)",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["engine_life_cycle"]},
+        "series": _np_series_columns(["engine_life_cycle"]),
         "group_by": ["engine_model", "mileage_range"],
         "trigger": 0,
         "zero_as_null": False,
@@ -568,7 +596,7 @@ REPORT_SHEET_CONFIG = {
     "np_engine_overspeed": {
         "name": "Engine overspeed >2660 rpm",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["engineoverspeed"]},
+        "series": _np_series_columns(["engineoverspeed"]),
         "group_by": ["engine_model"],
         "trigger": 1,
         "zero_as_null": False,
@@ -576,7 +604,7 @@ REPORT_SHEET_CONFIG = {
     "np_catalyst_temperature": {
         "name": "Catalyst temperature >860 C",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["Catalyst_temp_860"]},
+        "series": _np_series_columns(["Catalyst_temp_860"]),
         "group_by": ["engine_model"],
         "trigger": 1,
         "zero_as_null": False,
@@ -584,7 +612,7 @@ REPORT_SHEET_CONFIG = {
     "np_low_catalyst_efficiency": {
         "name": "Low Catalyst Efficiency",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["Low_Cat_Eff_time", "Low_Cat_Eff_count"]},
+        "series": _np_series_columns(["Low_Cat_Eff_time", "Low_Cat_Eff_count"]),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [1, 1],
         "zero_as_null": False,
@@ -592,9 +620,7 @@ REPORT_SHEET_CONFIG = {
     "np_coolant_temperature_high": {
         "name": "High coolant temp >104 C",
         "use_percentage_columns": False,
-        "series": {
-            NP_403_SERIES: ["Coolant_temp_high_104"]
-        },
+        "series": _np_series_columns(["Coolant_temp_high_104"]),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [1],
         "zero_as_null": False,
@@ -602,9 +628,7 @@ REPORT_SHEET_CONFIG = {
     "np_oil_temperature_high": {
         "name": "High oil temp >120 C",
         "use_percentage_columns": False,
-        "series": {
-            NP_403_SERIES: ["Oil_temp_high_120"]
-        },
+        "series": _np_series_columns(["Oil_temp_high_120"]),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [1],
         "zero_as_null": False,
@@ -612,9 +636,7 @@ REPORT_SHEET_CONFIG = {
     "np_boost_pressure_high": {
         "name": "High boost pressure >2.5 bar",
         "use_percentage_columns": False,
-        "series": {
-            NP_403_SERIES: ["Boost_pressure_high_25"]
-        },
+        "series": _np_series_columns(["Boost_pressure_high_25"]),
         "group_by": ["engine_model"],
         "triggers": [1],
         "zero_as_null": False,
@@ -622,90 +644,117 @@ REPORT_SHEET_CONFIG = {
     "np_ambient_pressure_low": {
         "name": "Low ambient pressure <850 mbar",
         "use_percentage_columns": False,
-        "series": {
-            NP_403_SERIES: ["Ambient_pressure_low_850"]
-        },
+        "series": _np_series_columns(["Ambient_pressure_low_850"]),
         "group_by": ["engine_model"],
+        "triggers": [1],
+        "zero_as_null": False,
+    },
+    "np_oil_pressure_low": {
+        "name": "Oil Pressure",
+        "use_percentage_columns": False,
+        "series": _np_series_columns(["Oil_pressure_low_12"]),
+        "group_by": ["engine_model", "mileage_range", "mission"],
         "triggers": [1],
         "zero_as_null": False,
     },
     "np_2a": {
         "name": "2a) Engine coolant temperature",
-        "series": {NP_403_SERIES: ["region1_coolantT", "region2_coolantT"]},
+        "series": _np_series_columns(["region1_coolantT", "region2_coolantT"]),
         "group_by": ["engine_model"],
         "triggers": [1, 1],
     },
     "np_2b": {
         "name": "2b) Oil temperature",
-        "series": {NP_403_SERIES: ["oiltemp1", "oiltemp2", "oiltemp3"]},
+        "series": _np_series_columns(["oiltemp1", "oiltemp2", "oiltemp3"]),
         "group_by": ["engine_model"],
         "triggers": [0, 1, 1],
     },
     "np_2c": {
         "name": "2c) Intake air temperature",
-        "series": {
-            NP_403_SERIES: ["reg1_Intake_Temp", "reg2_Intake_Temp", "reg3_Intake_Temp"]
-        },
+        "series": _np_series_columns(
+            ["reg1_Intake_Temp", "reg2_Intake_Temp", "reg3_Intake_Temp"]
+        ),
         "group_by": ["engine_model"],
         "triggers": [0, 1, 1],
     },
     "np_3a": {
         "name": "3a) Gas temperature",
-        "series": {NP_403_SERIES: ["fueltemp1", "fueltemp2", "fueltemp3"]},
+        "series": _np_series_columns(["fueltemp1", "fueltemp2", "fueltemp3"]),
         "group_by": ["engine_model"],
         "triggers": [1, 1, 0],
     },
     "np_3c": {
         "name": "3c) Gas rail pressure",
-        "series": {
-            NP_403_SERIES: [
+        "series": _np_series_columns(
+            [
                 "reg1_gas_railpressure",
                 "reg2_gas_railpressure",
                 "reg3_gas_railpressure",
             ]
-        },
+        ),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [1, 1, 0],
     },
+    "np_3e": {
+        "name": "3e) ETAS | Rail pressure",
+        "series": _np_series_columns(
+            [
+                "region1_etasp_railpressure",
+                "region2_etasp_railpressure",
+                "region3_etasp_railpressure",
+            ]
+        ),
+        "group_by": ["engine_model", "mileage_range"],
+        "triggers": [1, 1, 0],
+        "zero_as_null": False,
+    },
     "np_3f": {
         "name": "3f) Mixture self-adapt poor",
-        "series": {
-            NP_403_SERIES: [
+        "series": _np_series_columns(
+            [
                 "reg1_Mixture_selfpoor",
                 "reg2_Mixture_selfpoor",
                 "reg3_Mixture_selfpoor",
             ]
-        },
+        ),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [0, 1, 1],
     },
     "np_3g": {
         "name": "3g) Mixture self-adapt rich",
-        "series": {
-            NP_403_SERIES: [
+        "series": _np_series_columns(
+            [
                 "reg1_Mixture_selfrich",
                 "reg2_Mixture_selfrich",
                 "reg3_Mixture_selfrich",
             ]
-        },
+        ),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [1, 1, 0],
     },
+    "np_misfire_cylinders": {
+        "name": "Misfire-Knocking Detection Cyl",
+        "use_percentage_columns": False,
+        "series": _np_series_columns(["misfire_knocking_cylinders_min"]),
+        "group_by": ["engine_model", "mileage_range"],
+        "triggers": [1],
+        "zero_as_null": False,
+    },
     "np_4d": {
         "name": "4d) Catalyst Efficiency",
-        "series": {NP_403_SERIES: ["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"]},
+        "series": _np_series_columns(["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"]),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [0, 1, 1],
     },
     "np_5c": {
         "name": "5c) Intake manifold pressure",
-        "series": {
-            NP_403_SERIES: [
+        "series": _np_series_columns(
+            [
                 "reg1_Intake_manifoldpressure",
                 "reg2_Intake_manifoldpressure",
                 "reg3_Intake_manifoldpressure",
             ]
-        },
+        ),
         "group_by": ["engine_model"],
         "triggers": [0, 1, 1],
     },
@@ -862,7 +911,7 @@ REPORT_SHEET_CONFIG = {
         "groups": {"EUROCARGO": ["oil_t_ok", "oil_t_high"]},
         "new_layout": ["oil_t_ok", "oil_t_high"],
         "legacy": ["oiltemp1", "oiltemp2"],
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "3a": {
         "name": "3a) Coolant Temperature",
@@ -871,7 +920,7 @@ REPORT_SHEET_CONFIG = {
         "groups": {"EUROCARGO": ["eng_t_cool_1", "eng_t_cool_2", "eng_t_cool_3"]},
         "new_layout": ["eng_t_cool_1", "eng_t_cool_2", "eng_t_cool_3"],
         "legacy": ["region1_coolantT", "region2_coolantT", "region3_coolantT"],
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "3a_1": {
         "name": "3a_1) Coolant temp-pressure",
@@ -892,6 +941,7 @@ REPORT_SHEET_CONFIG = {
         "groups": {"EUROCARGO": ["fuel_t_1", "fuel_t_2", "fuel_t_3"]},
         "new_layout": ["fuel_t_1", "fuel_t_2", "fuel_t_3"],
         "legacy": ["fueltemp1", "fueltemp2", "fueltemp3"],
+        "skip_series": NP_409_SERIES_ALIASES,
     },
     "3c": {
         "name": "3d) Intake air temperature",
@@ -899,7 +949,7 @@ REPORT_SHEET_CONFIG = {
         "triggers": [0, 1, 1, 1],
         "groups": {"EUROCARGO": ["int_air_t_1", "int_air_t_2", "int_air_t_3", "int_air_t_4"]},
         "new_layout": ["int_air_t_1", "int_air_t_2", "int_air_t_3", "int_air_t_4"],
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "3c_1": {
         "name": "3c) Fuel pre-filter pressure",
@@ -941,7 +991,7 @@ REPORT_SHEET_CONFIG = {
         "triggers": [0, 1, 1, 1],
         "skip_groups": {"EUROCARGO"},
         "new_layout": ["egr_position_1", "egr_position_2", "egr_position_3"],
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "4a_1": {
         "name": "4a_1) Catalyst eff [g-kWh]",
@@ -994,7 +1044,7 @@ REPORT_SHEET_CONFIG = {
         "groups": {"EUROCARGO": ["urea_dep_1", "urea_dep_2", "urea_dep_3", "urea_dep_4"]},
         "new_layout": ["nh3_conc_1", "nh3_conc_2", "nh3_conc_3"],
         "legacy": ["region1_NH3", "region2_NH3", "regipn3_NH3"],
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "4e": {
         "name": "4e) Urea deposit accumulation",
@@ -1072,7 +1122,12 @@ REPORT_SHEET_CONFIG = {
         "trigger": 0,
         "groups": {"EUROCARGO": ["dpf_diff_p_1", "dpf_diff_p_2", "dpf_diff_p_3", "dpf_diff_p_4"]},
         "new_layout": ["dpf_diff_p_1", "dpf_diff_p_2", "dpf_diff_p_3", "dpf_diff_p_4"],
-        "skip_series": {"S_WAY_AS_E3", "S_WAY_AS_E5", NP_403_SERIES},
+        "skip_series": {
+            "S_WAY_AS_E3",
+            "S_WAY_AS_E5",
+            NP_403_SERIES,
+            *NP_409_SERIES_ALIASES,
+        },
         "legacy": ["deltap_flux_ok1", "deltap_flux_highpr1", "deltap_flux_lowpr1", "deltap_flux_nok1"],
     },
     "5d": {

@@ -310,12 +310,57 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
         )
         df = _fill_derived_column(df, "mileage_split", mileage_split_expr)
 
-    return add_np_403_calculated_features(df)
+    df = add_np_403_calculated_features(df)
+    return add_misfire_cylinders_feature(df)
 
 
 def _find_column_case_insensitive(df: DataFrame, column_name: str):
     """Risolve una colonna del dizionario NP senza dipendere dal casing Spark."""
     return {name.lower(): name for name in df.columns}.get(column_name.lower())
+
+
+def add_misfire_cylinders_feature(df: DataFrame) -> DataFrame:
+    """Calcola il KPI misfire come media per veicolo dei sei cilindri disponibili."""
+    target_name = "misfire_knocking_cylinders_min"
+    target_column = _find_column_case_insensitive(df, target_name)
+    if target_column is not None:
+        return df.withColumn(target_name, F.col(f"`{target_column}`").cast("double"))
+
+    source_columns = []
+    for cylinder in range(1, 7):
+        candidates = (
+            f"Misfire_cylinder{cylinder}",
+            f"Misfire_Knocking_Detection_Cylinder_{cylinder}",
+            f"Misfire/Knocking_Detection_Cylinder_{cylinder}",
+        )
+        source_column = next(
+            (
+                column
+                for candidate in candidates
+                if (column := _find_column_case_insensitive(df, candidate)) is not None
+            ),
+            None,
+        )
+        if source_column is None:
+            return df
+        source_columns.append(source_column)
+
+    numeric_columns = [F.col(f"`{column}`").cast("double") for column in source_columns]
+    value_sum = sum(
+        (F.coalesce(column, F.lit(0.0)) for column in numeric_columns),
+        F.lit(0.0),
+    )
+    value_count = sum(
+        (
+            F.when(column.isNotNull(), F.lit(1)).otherwise(F.lit(0))
+            for column in numeric_columns
+        ),
+        F.lit(0),
+    )
+    return df.withColumn(
+        target_name,
+        F.when(value_count > 0, value_sum / value_count),
+    )
 
 
 def _duration_seconds(column_name: str):

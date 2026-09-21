@@ -21,7 +21,7 @@
 - I notebook devono orchestrare; la logica va nei moduli Python.
 - Le liste hardcoded di sheet/colonne devono stare in `engine_config.py` o `vodr_config.py`, non nei notebook.
 - `get_table_path()` centralizza il routing delle config verso Unity Catalog o tabelle legacy.
-- Per Mission Test nuove config `399,400,401,402,405,406,408` si usa `u_truck_analyzer_p.mission_test_statistics.fat_table_<config>`.
+- Per Mission Test nuove config `399,400,401,402,405,406,408,409` si usa `u_truck_analyzer_p.mission_test_statistics.fat_table_<config>`.
 - Per VODR config `33,49,50,51,52,53,54,56` si usa `u_truck_analyzer_p.vodr_statistics.fat_table_<config>`.
 - Il fallback legacy resta presente per config vecchie, ma va trattato con cautela.
 - La priorita' per le colonne Mission Test e' Series > Group > fallback generico.
