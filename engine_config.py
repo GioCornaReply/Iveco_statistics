@@ -114,7 +114,12 @@ DEFAULT_REPORT_SHEETS = [
     "np_3f",
     "np_3g",
     "np_misfire_cylinders",
+    "np_3h_o_cylinders",
+    "np_409_4a_1",
+    "np_409_4a_2",
+    "np_409_4b",
     "np_4d",
+    "np_409_4d",
     "np_5c",
 ]
 
@@ -151,6 +156,10 @@ VARIABLE_DISPLAY_NAMES = {
     "low_ambient_pressure_counter": "Low ambient pressure events [count]",
     "oil_pressure_low_12": "Low oil pressure <1.2 bar [min]",
     "misfire_knocking_cylinders_min": "Misfire/Knocking Detection Cylinders (min)",
+    "misfuel_engine_normal_pct": "Misfuel With Engine In Normal Mode (Driving Conditions, Working Conditions (Pto))",
+    "catalyst_temperature_low_pct": "Low Catalyst Temperature (<300 °C)",
+    "catalyst_temperature_over_900_pct": "Catalyst Overheating (900-1000 °C)",
+    "catalyst_upstream_over_900_pct": "Temperature Upstream the Catalyst over 900 °C",
     "region1_coolantt": "Not optimal coolant temperature [102-107 C]",
     "region2_coolantt": "Critical coolant temperature [>107 C]",
     "oiltemp1": "Oil temperature OK [<120 C]",
@@ -349,17 +358,12 @@ REPORT_SHEET_CONFIG = {
     },
     "fuel_consumption_2": {
         "name": "Fuel Consumption 2",
-        "series_names": {
-            NP_409_SERIES: "Fuel Consumption CNG by speed",
-            NP_409_SOURCE_SERIES: "Fuel Consumption CNG by speed",
-        },
         "use_percentage_columns": False,
         "columns": ["average_fuel_consumption_kml"],
-        "series": _np_409_series_columns(["average_fuel_consumption_CNG_kml"]),
         "group_by": ["product_model", "power", "axle_description", "Average_vehicle_speed_range"],
         "trigger": 0,
         "zero_as_null": True,
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "fuel_lng": {
         "name": "Fuel Consumption LNG",
@@ -378,13 +382,16 @@ REPORT_SHEET_CONFIG = {
     "fuel_cng": {
         "name": "Fuel Consumption CNG",
         "use_percentage_columns": False,
-        "series": _np_series_columns(
-            [
-                "average_fuel_consumption_CNG_kml",
-                "average_fuel_consumption_CNG_l100km",
-                "Tot_fuel_CNG",
-            ]
-        ),
+        "series": {
+            **_np_series_columns(
+                [
+                    "average_fuel_consumption_CNG_kml",
+                    "average_fuel_consumption_CNG_l100km",
+                    "Tot_fuel_CNG",
+                ]
+            ),
+            **_np_409_series_columns(["average_fuel_consumption_CNG_kml"]),
+        },
         "group_by": ["product_model", "power", "axle_description", "mission"],
         "triggers": [0, 0, 0],
         "zero_as_null": True,
@@ -432,6 +439,10 @@ REPORT_SHEET_CONFIG = {
     },
     "average_vehicle_speed_2": {
         "name": "Average Vehicle Speed 2",
+        "series_names": {
+            NP_409_SERIES: "Average Vehicle Speed (2)",
+            NP_409_SOURCE_SERIES: "Average Vehicle Speed (2)",
+        },
         "use_percentage_columns": False,
         "columns": ["Average_vehicle_speed"],
         "group_by": ["product_model", "power", "axle_description"],
@@ -587,14 +598,16 @@ REPORT_SHEET_CONFIG = {
     },
     "np_engine_lifecycle": {
         "name": "Engine Life Cycle (%)",
+        "series_names": {NP_409_SERIES: "Engine Life Cycle", NP_409_SOURCE_SERIES: "Engine Life Cycle"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["engine_life_cycle"]),
-        "group_by": ["engine_model", "mileage_range"],
+        "group_by": ["mileage_range"],
         "trigger": 0,
         "zero_as_null": False,
     },
     "np_engine_overspeed": {
         "name": "Engine overspeed >2660 rpm",
+        "series_names": {NP_409_SERIES: "Engine Overspeed", NP_409_SOURCE_SERIES: "Engine Overspeed"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["engineoverspeed"]),
         "group_by": ["engine_model"],
@@ -603,6 +616,7 @@ REPORT_SHEET_CONFIG = {
     },
     "np_catalyst_temperature": {
         "name": "Catalyst temperature >860 C",
+        "series_names": {NP_409_SERIES: "Catalyst Temperature", NP_409_SOURCE_SERIES: "Catalyst Temperature"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Catalyst_temp_860"]),
         "group_by": ["engine_model"],
@@ -619,22 +633,25 @@ REPORT_SHEET_CONFIG = {
     },
     "np_coolant_temperature_high": {
         "name": "High coolant temp >104 C",
+        "series_names": {NP_409_SERIES: "Engine Coolant Temperature", NP_409_SOURCE_SERIES: "Engine Coolant Temperature"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Coolant_temp_high_104"]),
-        "group_by": ["engine_model", "mileage_range"],
+        "group_by": ["engine_model"],
         "triggers": [1],
         "zero_as_null": False,
     },
     "np_oil_temperature_high": {
         "name": "High oil temp >120 C",
+        "series_names": {NP_409_SERIES: "Oil Temperature (Low, High)", NP_409_SOURCE_SERIES: "Oil Temperature (Low, High)"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Oil_temp_high_120"]),
-        "group_by": ["engine_model", "mileage_range"],
+        "group_by": ["engine_model"],
         "triggers": [1],
         "zero_as_null": False,
     },
     "np_boost_pressure_high": {
         "name": "High boost pressure >2.5 bar",
+        "series_names": {NP_409_SERIES: "Boost Pressure", NP_409_SOURCE_SERIES: "Boost Pressure"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Boost_pressure_high_25"]),
         "group_by": ["engine_model"],
@@ -643,9 +660,10 @@ REPORT_SHEET_CONFIG = {
     },
     "np_ambient_pressure_low": {
         "name": "Low ambient pressure <850 mbar",
+        "series_names": {NP_409_SERIES: "Ambient Pressure", NP_409_SOURCE_SERIES: "Ambient Pressure"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Ambient_pressure_low_850"]),
-        "group_by": ["engine_model"],
+        "group_by": ["product_group"],
         "triggers": [1],
         "zero_as_null": False,
     },
@@ -697,6 +715,10 @@ REPORT_SHEET_CONFIG = {
     },
     "np_3e": {
         "name": "3e) ETAS | Rail pressure",
+        "series_names": {
+            NP_409_SERIES: "3e ETAS | Rail Pressure",
+            NP_409_SOURCE_SERIES: "3e ETAS | Rail Pressure",
+        },
         "series": _np_series_columns(
             [
                 "region1_etasp_railpressure",
@@ -740,11 +762,53 @@ REPORT_SHEET_CONFIG = {
         "triggers": [1],
         "zero_as_null": False,
     },
+    "np_3h_o_cylinders": {
+        "name": "3h-o Cylinders",
+        "use_percentage_columns": False,
+        "series": _np_409_series_columns(["misfuel_engine_normal_pct"]),
+        "group_by": ["engine_model", "mileage_range", "mission"],
+        "triggers": [1],
+        "zero_as_null": False,
+    },
+    "np_409_4a_1": {
+        "name": "4a_1 CatalystTemp | EngineSpeed",
+        "use_percentage_columns": False,
+        "series": _np_409_series_columns(["catalyst_temperature_over_900_pct"]),
+        "group_by": ["engine_model"],
+        "triggers": [1],
+        "zero_as_null": False,
+    },
+    "np_409_4a_2": {
+        "name": "4a_2 CatalystTemp | EngineSpeed",
+        "use_percentage_columns": False,
+        "series": _np_409_series_columns(["catalyst_temperature_low_pct"]),
+        "group_by": ["engine_model"],
+        "triggers": [1],
+        "zero_as_null": False,
+    },
+    "np_409_4b": {
+        "name": "4b Catalyst Upstream Temp",
+        "use_percentage_columns": False,
+        "series": _np_409_series_columns(["catalyst_upstream_over_900_pct"]),
+        "group_by": ["engine_model"],
+        "triggers": [1],
+        "zero_as_null": False,
+    },
     "np_4d": {
         "name": "4d) Catalyst Efficiency",
         "series": _np_series_columns(["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"]),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [0, 1, 1],
+        "skip_series": NP_409_SERIES_ALIASES,
+    },
+    "np_409_4d": {
+        "name": "4d Catalyst Efficiency C13",
+        "use_percentage_columns": True,
+        "series": _np_409_series_columns(["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"]),
+        "group_by": ["engine_model", "mileage_range"],
+        "triggers": [0, 1, 1],
+        "target_columns": ["REG2_CAT_EFF_NP_409_4D", "REG3_CAT_EFF_NP_409_4D"],
+        "zero_as_null": False,
     },
     "np_5c": {
         "name": "5c) Intake manifold pressure",

@@ -311,7 +311,8 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
         df = _fill_derived_column(df, "mileage_split", mileage_split_expr)
 
     df = add_np_403_calculated_features(df)
-    return add_misfire_cylinders_feature(df)
+    df = add_misfire_cylinders_feature(df)
+    return add_np_409_calculated_features(df)
 
 
 def _find_column_case_insensitive(df: DataFrame, column_name: str):
@@ -361,6 +362,174 @@ def add_misfire_cylinders_feature(df: DataFrame) -> DataFrame:
         target_name,
         F.when(value_count > 0, value_sum / value_count),
     )
+
+
+def _np_409_scope(df: DataFrame):
+    """Identifica le righe 409 senza coinvolgere le altre serie NP."""
+    scope = F.lit(False)
+    config_column = _find_column_case_insensitive(df, "id_config")
+    if config_column is not None:
+        scope = scope | F.coalesce(
+            F.col(f"`{config_column}`").cast("int") == F.lit(409), F.lit(False)
+        )
+
+    series_column = _find_column_case_insensitive(df, "product_series")
+    if series_column is not None:
+        series = F.upper(F.col(f"`{series_column}`").cast("string"))
+        scope = scope | F.coalesce(
+            series.contains("S_WAY_AS_NP_MY22_LATAM")
+            | series.contains("S_WAY_AS_NP_LATAM"),
+            F.lit(False),
+        )
+    return scope
+
+
+def _add_percentage_feature(
+    df: DataFrame,
+    target_name: str,
+    numerator_name: str,
+    denominator_names: tuple,
+):
+    """Calcola la percentuale di una regione rispetto alle regioni della stessa tabella."""
+    numerator_column = _find_column_case_insensitive(df, numerator_name)
+    denominator_columns = [
+        _find_column_case_insensitive(df, column_name)
+        for column_name in denominator_names
+    ]
+    if numerator_column is None or any(column is None for column in denominator_columns):
+        return df
+
+    numerator = F.coalesce(F.col(f"`{numerator_column}`").cast("double"), F.lit(0.0))
+    denominator = sum(
+        (
+            F.coalesce(F.col(f"`{column}`").cast("double"), F.lit(0.0))
+            for column in denominator_columns
+        ),
+        F.lit(0.0),
+    )
+    percentage = F.when(denominator > 0, numerator * F.lit(100.0) / denominator)
+    scope = _np_409_scope(df)
+    existing_column = _find_column_case_insensitive(df, target_name)
+    fallback = (
+        F.col(f"`{existing_column}`").cast("double")
+        if existing_column is not None
+        else F.lit(None).cast("double")
+    )
+    return df.withColumn(target_name, F.when(scope, percentage).otherwise(fallback))
+
+
+def add_np_409_calculated_features(df: DataFrame) -> DataFrame:
+    """Ricalcola KPI 409 usando le formule e i raggruppamenti del template NP."""
+    target_name = "Oil_pressure_low_12"
+    existing_oil_column = _find_column_case_insensitive(df, target_name)
+    timer_columns = [
+        _find_column_case_insensitive(df, name)
+        for name in ("Low_Oil_pressure_timer", "KeyON_Timer", "Engine_ON_400_rpm_timer")
+    ]
+    scope = _np_409_scope(df)
+
+    if all(timer_columns):
+        low_pressure_seconds, key_on_seconds, engine_on_seconds = [
+            _duration_seconds(column) for column in timer_columns
+        ]
+        oil_pressure_minutes = (
+            low_pressure_seconds - (key_on_seconds - engine_on_seconds)
+        ) / F.lit(60.0)
+        valid_oil_pressure = F.when(oil_pressure_minutes >= 0, oil_pressure_minutes)
+        fallback = (
+            F.col(f"`{existing_oil_column}`").cast("double")
+            if existing_oil_column is not None
+            else F.lit(None).cast("double")
+        )
+        df = df.withColumn(
+            target_name,
+            F.when(scope, valid_oil_pressure).otherwise(fallback),
+        )
+    elif existing_oil_column is not None:
+        existing_value = F.col(f"`{existing_oil_column}`").cast("double")
+        valid_existing_value = F.when(existing_value >= 0, existing_value)
+        df = df.withColumn(
+            target_name,
+            F.when(scope, valid_existing_value).otherwise(existing_value),
+        )
+
+    for target_name, numerator_name, denominator_names in (
+        (
+            "catalyst_temperature_low_pct",
+            "region1_Catalyst_temp_enginespeed",
+            (
+                "region1_Catalyst_temp_enginespeed",
+                "region2_Catalyst_temp_enginespeed",
+                "region3_Catalyst_temp_enginespeed",
+            ),
+        ),
+        (
+            "catalyst_temperature_over_900_pct",
+            "region6_Catalyst_temp_enginespeed",
+            (
+                "region4_Catalyst_temp_enginespeed",
+                "region5_Catalyst_temp_enginespeed",
+                "region6_Catalyst_temp_enginespeed",
+            ),
+        ),
+        (
+            "catalyst_upstream_over_900_pct",
+            "reg3_Temp_catalyst",
+            ("reg1_Temp_catalyst", "reg2_Temp_catalyst", "reg3_Temp_catalyst"),
+        ),
+    ):
+        df = _add_percentage_feature(
+            df, target_name, numerator_name, denominator_names
+        )
+
+    misfire_mode_source_sets = []
+    for cylinder in range(1, 7):
+        misfire_mode_source_sets.append(
+            tuple(
+                _find_column_case_insensitive(
+                    df, f"region{region}_misfuelcylinder{cylinder}_enginemode"
+                )
+                for region in ("1A", "1B", "1C", "2", "3", "4")
+            )
+        )
+    if all(all(source_set) for source_set in misfire_mode_source_sets):
+        cylinder_percentages = []
+        for source_set in misfire_mode_source_sets:
+            values = [
+                F.coalesce(F.col(f"`{column}`").cast("double"), F.lit(0.0))
+                for column in source_set
+            ]
+            total = sum(values, F.lit(0.0))
+            cylinder_percentages.append(
+                F.when(total > 0, values[4] * F.lit(100.0) / total)
+            )
+        count = sum(
+            (
+                F.when(value.isNotNull(), F.lit(1)).otherwise(F.lit(0))
+                for value in cylinder_percentages
+            ),
+            F.lit(0),
+        )
+        total = sum(
+            (
+                F.coalesce(value, F.lit(0.0))
+                for value in cylinder_percentages
+            ),
+            F.lit(0.0),
+        )
+        target_column = "misfuel_engine_normal_pct"
+        existing_column = _find_column_case_insensitive(df, target_column)
+        fallback = (
+            F.col(f"`{existing_column}`").cast("double")
+            if existing_column is not None
+            else F.lit(None).cast("double")
+        )
+        df = df.withColumn(
+            target_column,
+            F.when(scope, F.when(count > 0, total / count)).otherwise(fallback),
+        )
+
+    return df
 
 
 def _duration_seconds(column_name: str):

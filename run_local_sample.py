@@ -353,20 +353,41 @@ def clean_excel_column_name(col_name):
     lower_name = name.lower()
 
     if lower_name.startswith("stddev_"):
-        return "STD"
+        return "Standard Deviation"
     if lower_name.startswith("advice_"):
-        return "advice"
+        return "Advice"
     if lower_name.startswith("alert_"):
-        return "alert"
+        return "Alert"
     if lower_name.startswith("count_"):
-        return "count"
+        return "Count"
 
     display_name = get_display_name_for_metric(name)
     if display_name:
         return display_name
 
+    dimension_names = {
+        "vin": "VIN",
+        "request_code": "Request Code",
+        "id_config": "ID Config",
+        "product_group": "Product Group",
+        "product_series": "Product Series",
+        "product_type": "Product Type",
+        "product_model": "Product Model",
+        "commercial_model": "Commercial Model",
+        "engine_model": "Engine Model",
+        "power": "Power",
+        "axle_description": "Axle Description",
+        "mission": "Mission",
+        "mileage_range": "Mileage Range",
+        "mileage_split": "Mileage Split",
+        "average_vehicle_speed_split": "Km",
+        "average_vehicle_speed_range": "Average Vehicle Speed Range",
+    }
+    if lower_name in dimension_names:
+        return dimension_names[lower_name]
+
     name = re.sub(r"_+", " ", name).strip()
-    return name
+    return name.title()
 
 
 def get_display_name_for_metric(col_name):
@@ -449,6 +470,11 @@ def prepare_excel_dataframe(df):
     """Normalizza i valori numerici prima dell'export Excel."""
     df_export = sort_report_rows(df.copy())
     df_export = move_count_columns_to_end(df_export)
+
+    if "engine_model" in df_export.columns:
+        df_export["engine_model"] = df_export["engine_model"].replace(
+            {"Cursor 9": "C9", "Cursor 11": "C11", "Cursor 13": "C13"}
+        )
 
     numeric_cols = df_export.select_dtypes(include=["number"]).columns
     if len(numeric_cols) > 0:
