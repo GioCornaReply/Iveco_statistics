@@ -312,7 +312,8 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
 
     df = add_np_403_calculated_features(df)
     df = add_misfire_cylinders_feature(df)
-    return add_np_409_calculated_features(df)
+    df = add_np_409_calculated_features(df)
+    return add_np_409_optimal_fuel_consumption_feature(df)
 
 
 def _find_column_case_insensitive(df: DataFrame, column_name: str):
@@ -321,40 +322,56 @@ def _find_column_case_insensitive(df: DataFrame, column_name: str):
 
 
 def add_misfire_cylinders_feature(df: DataFrame) -> DataFrame:
-    """Calcola il KPI misfire come media per veicolo dei sei cilindri disponibili."""
+    """Calcola il KPI misfire come media dei sei cilindri disponibili, in minuti."""
     target_name = "misfire_knocking_cylinders_min"
     target_column = _find_column_case_insensitive(df, target_name)
-    if target_column is not None:
-        return df.withColumn(target_name, F.col(f"`{target_column}`").cast("double"))
-
-    source_columns = []
+    cylinder_values = []
     for cylinder in range(1, 7):
-        candidates = (
-            f"Misfire_cylinder{cylinder}",
-            f"Misfire_Knocking_Detection_Cylinder_{cylinder}",
-            f"Misfire/Knocking_Detection_Cylinder_{cylinder}",
-        )
-        source_column = next(
+        calculated_column = next(
             (
                 column
-                for candidate in candidates
+                for candidate in (
+                    f"Misfire_cylinder{cylinder}",
+                    f"Misfire_Knocking_Detection_Cylinder_{cylinder}",
+                    f"Misfire/Knocking_Detection_Cylinder_{cylinder}",
+                )
                 if (column := _find_column_case_insensitive(df, candidate)) is not None
             ),
             None,
         )
-        if source_column is None:
-            return df
-        source_columns.append(source_column)
+        timer_column = next(
+            (
+                column
+                for candidate in (
+                    f"Injection_advance_cylinder_{cylinder}_timer",
+                    f"Injection_advance_cylinder_{cylinder}_Timer",
+                )
+                if (column := _find_column_case_insensitive(df, candidate)) is not None
+            ),
+            None,
+        )
 
-    numeric_columns = [F.col(f"`{column}`").cast("double") for column in source_columns]
+        values = []
+        if calculated_column is not None:
+            values.append(F.col(f"`{calculated_column}`").cast("double"))
+        if timer_column is not None:
+            values.append(_duration_seconds(timer_column) / F.lit(60.0))
+        if values:
+            cylinder_values.append(F.coalesce(*values))
+
+    if not cylinder_values:
+        if target_column is None:
+            return df
+        return df.withColumn(target_name, F.col(f"`{target_column}`").cast("double"))
+
     value_sum = sum(
-        (F.coalesce(column, F.lit(0.0)) for column in numeric_columns),
+        (F.coalesce(value, F.lit(0.0)) for value in cylinder_values),
         F.lit(0.0),
     )
     value_count = sum(
         (
-            F.when(column.isNotNull(), F.lit(1)).otherwise(F.lit(0))
-            for column in numeric_columns
+            F.when(value.isNotNull(), F.lit(1)).otherwise(F.lit(0))
+            for value in cylinder_values
         ),
         F.lit(0),
     )
@@ -362,6 +379,26 @@ def add_misfire_cylinders_feature(df: DataFrame) -> DataFrame:
         target_name,
         F.when(value_count > 0, value_sum / value_count),
     )
+
+
+def add_np_409_optimal_fuel_consumption_feature(df: DataFrame) -> DataFrame:
+    """Normalizza la metrica 1a_1 con il nome usato dal report NP 409."""
+    target_name = "optimal_specific_fuel_consumption_region_50_100_400_1800_rpm"
+    source_column = next(
+        (
+            column
+            for candidate in (
+                target_name,
+                "Optimal Specific Fuel Consumption Region (50-100 % / 400-1800 Rpm)",
+                "Optimal Specific Fuel Consumption Region (50-100 % / 400-1800 RPM)",
+            )
+            if (column := _find_column_case_insensitive(df, candidate)) is not None
+        ),
+        None,
+    )
+    if source_column is None:
+        return df
+    return df.withColumn(target_name, F.col(f"`{source_column}`").cast("double"))
 
 
 def _np_409_scope(df: DataFrame):

@@ -7,6 +7,7 @@ import pandas as pd
 from pyspark.sql import SparkSession
 
 from engine_cleaning import (
+    add_misfire_cylinders_feature,
     add_np_403_calculated_features,
     apply_statistics_quality_filters,
     exclude_corrupt_statistics_rows,
@@ -75,6 +76,26 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
         self.assertEqual(by_vin["valid"].crank_100km_pct, 50.0)
         self.assertEqual(by_vin["legacy"].mileage, 1001.0)
         self.assertEqual(by_vin["legacy"].enginehours, 2.0)
+
+    def test_misfire_kpi_averages_cylinder_calculated_values(self):
+        df = self.spark.createDataFrame(
+            [(60.0, 120.0, None, 180.0, 240.0, 300.0)],
+            [f"Misfire_cylinder{index}" for index in range(1, 7)],
+        )
+
+        result = add_misfire_cylinders_feature(df).first()
+
+        self.assertEqual(result.misfire_knocking_cylinders_min, 180.0)
+
+    def test_misfire_kpi_derives_minutes_from_injection_advance_timers(self):
+        df = self.spark.createDataFrame(
+            [(60.0, 120.0, 180.0, 240.0, 300.0, 360.0)],
+            [f"Injection_advance_cylinder_{index}_timer" for index in range(1, 7)],
+        )
+
+        result = add_misfire_cylinders_feature(df).first()
+
+        self.assertEqual(result.misfire_knocking_cylinders_min, 3.5)
 
     def test_np_timer_columns_are_normalized_from_clock_and_numeric_values(self):
         df = self.spark.createDataFrame(

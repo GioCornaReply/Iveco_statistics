@@ -230,6 +230,19 @@ class Config405406Test(unittest.TestCase):
         for sheet_id, columns in expected.items():
             self.assertEqual(get_columns_for_sheet(series, group, sheet_id), columns)
 
+    def test_409_np_adds_the_1a_1_optimal_fuel_consumption_sheet(self):
+        self.assertEqual(
+            get_columns_for_sheet(
+                "S_WAY_AS_NP_MY22_LATAM", "IVECO_S_WAY", "np_1a_1"
+            ),
+            ["optimal_specific_fuel_consumption_region_50_100_400_1800_rpm"],
+        )
+        self.assertEqual(
+            get_sheet_settings("np_1a_1")["name"],
+            "1a_1 EngineTorque | EngineSpeed",
+        )
+        self.assertLessEqual(len(get_sheet_settings("np_1a_1")["name"]), 31)
+
     def test_403_np_calculated_sheet_units_and_vehicle_speed_bands(self):
         series = "S_WAY_NP_MY_2024"
         group = "IVECO_S_X_WAY_NP"
