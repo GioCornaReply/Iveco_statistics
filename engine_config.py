@@ -181,6 +181,7 @@ VARIABLE_DISPLAY_NAMES = {
     "fueltemp1": "Too cold gas temperature [<-30 C]",
     "fueltemp2": "Cold gas temperature [-30..-10 C]",
     "fueltemp3": "Gas temperature OK [-10..0 C]",
+    "fueltemp_magg_0": "Gas temperature [>0 C]",
     "reg1_gas_railpressure": "Gas rail pressure too low [<4500 mbar]",
     "reg2_gas_railpressure": "Gas rail pressure low [4500-5500 mbar]",
     "reg3_gas_railpressure": "Gas rail pressure OK [5500-6500 mbar]",
@@ -707,9 +708,16 @@ REPORT_SHEET_CONFIG = {
     },
     "np_3a": {
         "name": "3a) Gas temperature",
-        "series": _np_series_columns(["fueltemp1", "fueltemp2", "fueltemp3"]),
+        "series": {
+            **_np_series_columns(["fueltemp1", "fueltemp2", "fueltemp3"]),
+            # La 409 CNG ha anche la fascia >0 C: senza, il denominatore
+            # esclude quasi tutto il tempo e gonfia le fasce fredde.
+            **_np_409_series_columns(
+                ["fueltemp1", "fueltemp2", "fueltemp3", "fueltemp_magg_0"]
+            ),
+        },
         "group_by": ["engine_model"],
-        "triggers": [1, 1, 0],
+        "triggers": [1, 1, 0, 0],
     },
     "np_3c": {
         "name": "3c) Gas rail pressure",

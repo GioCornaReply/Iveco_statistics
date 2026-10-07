@@ -299,6 +299,16 @@ class Config405406Test(unittest.TestCase):
             ["engineoverspeed"],
         )
 
+    def test_409_np_gas_temperature_includes_the_over_zero_region(self):
+        self.assertEqual(
+            get_columns_for_sheet("S-WAY_AS_NP_MY22_LATAM", "IVECO_S_WAY", "np_3a"),
+            ["fueltemp1", "fueltemp2", "fueltemp3", "fueltemp_magg_0"],
+        )
+        self.assertEqual(
+            get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", "np_3a"),
+            ["fueltemp1", "fueltemp2", "fueltemp3"],
+        )
+
     def test_409_np_catalyst_efficiency_exports_the_under_50_check_region(self):
         self.assertIsNone(get_sheet_settings("np_409_4d")["target_columns"])
         self.assertEqual(
