@@ -97,6 +97,16 @@ class Statistics403QualityFiltersTest(unittest.TestCase):
 
         self.assertEqual(result.misfire_knocking_cylinders_min, 3.5)
 
+    def test_misfire_kpi_reads_catalog_named_cylinder_columns(self):
+        df = self.spark.createDataFrame(
+            [(6.0, 6.0, 6.0, 12.0, 12.0, 12.0)],
+            [f"Misfire/Knocking_Detection_Cylinder_{index}_MIN" for index in range(1, 7)],
+        )
+
+        result = add_misfire_cylinders_feature(df).first()
+
+        self.assertEqual(result.misfire_knocking_cylinders_min, 9.0)
+
     def test_np_timer_columns_are_normalized_from_clock_and_numeric_values(self):
         df = self.spark.createDataFrame(
             [

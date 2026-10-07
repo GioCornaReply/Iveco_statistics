@@ -10,6 +10,52 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-10-07 - Claude (Opus 5.5) - branch `fix/mission-test-409-kpis`
+
+- **Obiettivo**: correggere gli errori 409 (S-WAY AS NP MY22 LATAM) emersi nella call di review dello Statistics.
+- **Fix applicate** (solo registry/feature 409, 403 invariata salvo dove indicato):
+  - Vehicle Speed: la 409 usa `np_average_vehicle_speed` (solo `<20 km/h` e `20-40 km/h`); `average_vehicle_speed` generico skippato.
+  - Engine Overspeed duplicato: skippati `engine_over_speed`/`engine_over_speed_2` (overspeed in % non esiste nelle query SQL); resta `np_engine_overspeed` in secondi.
+  - 1A split per tag Fly Recorder: `np_1a_1` = `region3`/`region4_torque_enginespeed` (tag `bsRpm__esPercCMUIstABSReal_1`); nuovo `np_409_1a_2` = `region1`, `region2`, `region3bis`, `region4bis` (tag `_2`) con split `power`. Percentuali calcolate per tag. Fogli diesel `1a`/`1a_2` skippati per la 409. Rimossa la calculated `optimal_specific_fuel_consumption_region_50_100_400_1800_rpm`.
+  - Header 1a: display name con chiave `<variabile>_<sheet_id>` (lookup aggiunto in `get_display_name_for_metric`) per non rinominare le regioni diesel legacy.
+  - Misfire: `np_misfire_cylinders` spostato fra le calculated; match colonne cilindro reso robusto al naming catalogo (`Misfire/Knocking_Detection_Cylinder_N_MIN`).
+  - `np_409_4d`: rimosso `target_columns`, ora esporta anche `reg1_Cat_Eff` (<50 %) come check della somma percentuali.
+- **Test**: 5 nuovi test config + 1 Spark per misfire. In locale `pytest` -> 31 passed, 3 failed preesistenti (test 403 su group_by cambiati in `42fbe49` e header `Mileage Range`), 13 error Spark per `WinError 6` (gateway Java non avviabile da questo terminale).
+- **Da verificare su Databricks**: log `Sheet np_misfire_cylinders: presenti=...` (se ancora 0, i nomi colonna cilindri della fat table 409 sono diversi); presenza di `region3bis`/`region4bis_torque_enginespeed`.
+- **Aperti (non codice)**: deviazione standard ~105 % su un foglio con 21 casi (check Giovanni); gas temperature 43 % sotto -30 C (chiedere a Luigi; verificare anche se la 409 ha regioni gas temperature oltre `fueltemp1..3`, perche' il denominatore percentuale usa solo quelle tre).
+
+### 2026-06-22 (pomeriggio) - Claude (Opus 4.7) - branch `main`
+
+- **Obiettivo**: capire perche' molti sheet VODR config `53` e `56` risultano vuoti su Databricks, partendo dalla lista degli sheet vuoti fornita dal cliente e dal template `cestino/VODR_template EurocargoMY24 6-10 ton.xlsx`.
+- **Contesto letto**: `Main_pipeline_Vodr.ipynb`, `vodr_pipeline.py`, `vodr_config.py`, `engine_cleaning.py`, template Eurocargo (5 sheet: `FOGLIO_GIO`, `SIMPLE ITEMS`, `CALCULATED ITEMS`, `TABLES`, `Progress bar`, `GAUGE ITEM`).
+- **Strumento di indagine**: aggiunta cella diagnostica `diagnose_vodr_empty_sheets()` in fondo a `Main_pipeline_Vodr.ipynb` (commit `0a99a90`, poi esteso in `04f02b9` per stampare anche stato colonne sorgente, join MT e candidati per speed/mileage).
+- **Fix applicate** (commit `424fce1`):
+  - `engine_cleaning.add_legacy_preparation_features`: ora usa `F.coalesce` per `mission`, `mileage_range`, `Average_vehicle_speed_range/_split`, `mileage_split`. Helper isolato `_fill_derived_column`. La guardia `if "X" not in df.columns` non bastava: nella fat table VODR 56 quelle colonne esistono come schema ma sono tutte NULL.
+  - `vodr_config.VODR_REPORT_SHEETS["time_in_semi"].columns`: rimosso il prefisso `Tot`, ora `TimeInSemiWithEngineRunning` / `TimeInAutoSuspendWithEngineRunning` / `TimeInAutoWithEngineRunning` (allineato al template `SIMPLE ITEMS`).
+  - `vodr_config.VODR_PERCENTAGE_GROUPS["5c"]`: aggiunto `Soh90ON` (era nel template ma mancava nel registry); trigger esteso a `[1,1,1,0,0,1,1,1,0,0]`.
+- **Test/verifiche**:
+  - `tests/test_vodr_config.py`: 2 nuovi test (`test_vodr_time_in_semi_uses_official_column_names`, `test_vodr_5c_battery_soh_includes_soh90on`).
+  - `python -m pytest tests/`: 21 passed (Python 3.14 di sistema; il `.venv` locale non ha pyspark/pandas — usare l'interprete `C:\Users\g.cornacchia\AppData\Local\Python\bin\python.exe`).
+- **Esito dopo il run Databricks delle 15:35**:
+  - **Risolto**: 3b/3c/3d (retarder presente in fat table 56), 4a Gear10-16 e R2-R4, 4c, 2a Weight45/50, lights (29 colonne), time_in_semi, Soh90ON. Tutte queste colonne ora compaiono in `present_cols` nella diagnostica.
+  - **Ancora vuoti**: tutti gli sheet con `mission` o `mileage_range` nel `group_by` (1b_2, 2a, 4a, 4c, 4c_2, 5a, 5b, 5c, 5c_2, 6a, 6b, 6b_2, 6c, 6c_2, 6d, average_kick_down_2, selection_mode_2, aebs_intervention, safety, level, lights).
+- **Causa rimasta da risolvere**: in `df_time_percentage` per config 56,
+  - `Average_vehicle_speed`: TUTTA NULL (0% non-null);
+  - `mileage`: TUTTA NULL;
+  - `cov_div_len`: ASSENTE;
+  - `Average_vehicle_speed_mt` / `mileage_mt`: TUTTA NULL;
+  - `id_config_mt`: TUTTA NULL → **il join Mission Test non aggancia nessun VIN VODR 56**.
+  Senza sorgenti, `add_legacy_preparation_features` non puo' derivare `mission` / `mileage_range` neanche con la nuova fix `coalesce`.
+- **Ipotesi (da verificare)**: in `vodr_config.VODR_TO_MT_CONFIGS` non c'e' un mapping dedicato `frozenset({56})` ne' `frozenset({53})`, quindi il join ricade su `DEFAULT_VODR_MT_CONFIGS` (31 config MT) che probabilmente non coprono Eurocargo MY24 6-10 ton. Da confermare con un'esplorazione di `Old_statistics/*VODR*HEAVY_PREP*` (esplorazione interrotta dall'utente prima dell'esecuzione).
+- **Prossimi passi** (sessione 2026-06-23):
+  1. Lanciare l'esplorazione interrotta: come calcolavano `mission` / `mileage_range` / `Average_vehicle_speed` i notebook legacy VODR su Eurocargo? Esiste una colonna alternativa nella fat table VODR 56 (`total_distance`, `total_driving_time`, `engineminutes`, somma tempi per mission) utilizzabile come proxy?
+  2. Verificare in `vodr_config.VODR_TO_MT_CONFIGS` se serve aggiungere un mapping dedicato per `{56}` (e `{53}`) verso config Mission Test che agganciano i VIN Eurocargo MY24.
+  3. Se ne' la fat table VODR 56 ne' MT portano speed/mileage per quei VIN, riaprire la discussione col cliente: o si aggiungono le colonne sorgente nella fat table 56, o si accetta che gli sheet con `mission`/`mileage_range` restino vuoti per quella config.
+- **Note operative**:
+  - L'output diagnostico completo dei due run (15:06 prima delle fix, 15:35 dopo) e' nella chat ma non incollato qui per non gonfiare il file.
+  - La cartella `cestino/` resta non tracciata: contiene `VODR_56_new_thresholds_19_06.xlsx` e `VODR_template EurocargoMY24 6-10 ton.xlsx` (template colonne).
+  - Commit pushati su `origin/main`: `0a99a90`, `424fce1`, `04f02b9`.
+
 ### 2026-06-22 - Claude (Opus 4.7) - branch `main`
 
 - **Obiettivo**: rilettura del repository per riallineare i file MD allo stato del codice dopo il revert del 2026-06-19.

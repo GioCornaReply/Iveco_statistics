@@ -105,7 +105,9 @@ DEFAULT_REPORT_SHEETS = [
     "np_boost_pressure_high",
     "np_ambient_pressure_low",
     "np_oil_pressure_low",
+    "np_misfire_cylinders",
     "np_1a_1",
+    "np_409_1a_2",
     "np_2a",
     "np_2b",
     "np_2c",
@@ -114,7 +116,6 @@ DEFAULT_REPORT_SHEETS = [
     "np_3e",
     "np_3f",
     "np_3g",
-    "np_misfire_cylinders",
     "np_3h_o_cylinders",
     "np_409_4a_1",
     "np_409_4a_2",
@@ -156,7 +157,14 @@ VARIABLE_DISPLAY_NAMES = {
     "low_ambient_pressure_seconds": "Low ambient pressure < 850 mbar [s]",
     "low_ambient_pressure_counter": "Low ambient pressure events [count]",
     "oil_pressure_low_12": "Low oil pressure <1.2 bar [min]",
-    "optimal_specific_fuel_consumption_region_50_100_400_1800_rpm": "Optimal Specific Fuel Consumption Region (50-100 % / 400-1800 Rpm)",
+    # Regioni 1a 409: chiavi con suffisso sheet per non rinominare le
+    # stesse variabili region*_torque_enginespeed delle config diesel legacy.
+    "region3_torque_enginespeed_np_1a_1": "Optimal specific fuel consumption region (50-100 % / 400-1800 rpm)",
+    "region4_torque_enginespeed_np_1a_1": "High specific fuel consumption (50-100 % / 1800-2500 rpm)",
+    "region1_torque_enginespeed_np_409_1a_2": "Low load, low TVA percentage opening, high specific fuel consumption (0-30 % / 400-2500 rpm)",
+    "region2_torque_enginespeed_np_409_1a_2": "High specific fuel consumption (30-50 % / 400-1000 rpm)",
+    "region3bis_torque_enginespeed_np_409_1a_2": "Optimal specific fuel consumption region (30-50 % / 1000-1800 rpm)",
+    "region4bis_torque_enginespeed_np_409_1a_2": "High specific fuel consumption (30-50 % / 1800-2500 rpm)",
     "misfire_knocking_cylinders_min": "Misfire/Knocking Detection Cylinders (MIN)",
     "misfuel_engine_normal_pct": "Misfuel With Engine In Normal Mode (Driving Conditions, Working Conditions (Pto))",
     "catalyst_temperature_low_pct": "Low Catalyst Temperature (<300 °C)",
@@ -423,12 +431,12 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["Average_vehicle_speed_split"],
         "trigger": 0,
         "zero_as_null": True,
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "np_average_vehicle_speed": {
         "name": "Average Vehicle Speed",
         "use_percentage_columns": False,
-        "series": {NP_403_SERIES: ["Average_vehicle_speed"]},
+        "series": _np_series_columns(["Average_vehicle_speed"]),
         "group_by": ["Average_vehicle_speed_split"],
         "allowed_group_values": {
             "Average_vehicle_speed_split": ["<20 km/h", "20-40 km/h"],
@@ -498,7 +506,7 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["product_group"],
         "trigger": 1,
         "zero_as_null": True,
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "engine_over_speed_2": {
         "name": "Engine over speed 2",
@@ -507,7 +515,7 @@ REPORT_SHEET_CONFIG = {
         "group_by": ["product_model"],
         "trigger": 1,
         "zero_as_null": True,
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "up_downstream_temperatures": {
         "name": "Up&Downstream Temperatures 2",
@@ -764,14 +772,29 @@ REPORT_SHEET_CONFIG = {
         "triggers": [1],
         "zero_as_null": False,
     },
+    # La 1a della 409 arriva da due tag Fly Recorder diversi: le percentuali
+    # vanno calcolate separatamente per tag, quindi un foglio per tag.
     "np_1a_1": {
         "name": "1a_1 EngineTorque | EngineSpeed",
-        "use_percentage_columns": False,
         "series": _np_409_series_columns(
-            ["optimal_specific_fuel_consumption_region_50_100_400_1800_rpm"]
+            ["region3_torque_enginespeed", "region4_torque_enginespeed"]
         ),
         "group_by": ["engine_model", "mileage_range"],
-        "triggers": [1],
+        "triggers": [0, 1],
+        "zero_as_null": False,
+    },
+    "np_409_1a_2": {
+        "name": "1a_2 EngineTorque | EngineSpeed",
+        "series": _np_409_series_columns(
+            [
+                "region1_torque_enginespeed",
+                "region2_torque_enginespeed",
+                "region3bis_torque_enginespeed",
+                "region4bis_torque_enginespeed",
+            ]
+        ),
+        "group_by": ["engine_model", "power", "mileage_range"],
+        "triggers": [1, 1, 0, 1],
         "zero_as_null": False,
     },
     "np_3h_o_cylinders": {
@@ -819,7 +842,6 @@ REPORT_SHEET_CONFIG = {
         "series": _np_409_series_columns(["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"]),
         "group_by": ["engine_model", "mileage_range"],
         "triggers": [0, 1, 1],
-        "target_columns": ["REG2_CAT_EFF_NP_409_4D", "REG3_CAT_EFF_NP_409_4D"],
         "zero_as_null": False,
     },
     "np_5c": {
@@ -856,7 +878,7 @@ REPORT_SHEET_CONFIG = {
             "region6_torque_enginespeed",
             "region7_torque_enginespeed",
         ],
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "1a_2": {
         "name": "1a_2) Engine Torque-Speed",
@@ -880,7 +902,7 @@ REPORT_SHEET_CONFIG = {
             "region6_torque_enginespeed",
             "region7_torque_enginespeed",
         ],
-        "skip_series": {NP_403_SERIES},
+        "skip_series": {NP_403_SERIES, *NP_409_SERIES_ALIASES},
     },
     "1b": {
         "name": "1b) Engine Torque-Veh Speed",

@@ -392,6 +392,11 @@ def clean_excel_column_name(col_name):
 
 def get_display_name_for_metric(col_name):
     """Ritorna l'Item Name del dizionario a partire dal nome tecnico."""
+    # Prima il nome con suffisso sheet: serve quando la stessa variabile ha
+    # descrizioni diverse a seconda della config (es. regioni 1a NP 409).
+    sheet_specific_name = VARIABLE_DISPLAY_NAMES.get(str(col_name).strip().lower())
+    if sheet_specific_name:
+        return sheet_specific_name
     metric_name = strip_metric_suffix(str(col_name))
     return VARIABLE_DISPLAY_NAMES.get(metric_name.lower())
 

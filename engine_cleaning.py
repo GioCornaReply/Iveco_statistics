@@ -312,13 +312,30 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
 
     df = add_np_403_calculated_features(df)
     df = add_misfire_cylinders_feature(df)
-    df = add_np_409_calculated_features(df)
-    return add_np_409_optimal_fuel_consumption_feature(df)
+    return add_np_409_calculated_features(df)
 
 
 def _find_column_case_insensitive(df: DataFrame, column_name: str):
     """Risolve una colonna del dizionario NP senza dipendere dal casing Spark."""
     return {name.lower(): name for name in df.columns}.get(column_name.lower())
+
+
+def _normalized_column_key(column_name: str) -> str:
+    """Chiave alfanumerica: ignora casing, spazi, `/`, `-` e underscore."""
+    return re.sub(r"[^0-9a-z]", "", str(column_name).lower())
+
+
+def _find_misfire_cylinder_column(df: DataFrame, cylinder: int):
+    """Trova la calculated misfire del cilindro anche con naming catalogo.
+
+    La fat table puo' esporre `Misfire_cylinder1` oppure l'Item Name ripulito,
+    es. `Misfire/Knocking_Detection_Cylinder_1_MIN`.
+    """
+    pattern = re.compile(rf"^misfire[a-z]*cylinder{cylinder}(min)?$")
+    return next(
+        (column for column in df.columns if pattern.match(_normalized_column_key(column))),
+        None,
+    )
 
 
 def add_misfire_cylinders_feature(df: DataFrame) -> DataFrame:
@@ -327,18 +344,7 @@ def add_misfire_cylinders_feature(df: DataFrame) -> DataFrame:
     target_column = _find_column_case_insensitive(df, target_name)
     cylinder_values = []
     for cylinder in range(1, 7):
-        calculated_column = next(
-            (
-                column
-                for candidate in (
-                    f"Misfire_cylinder{cylinder}",
-                    f"Misfire_Knocking_Detection_Cylinder_{cylinder}",
-                    f"Misfire/Knocking_Detection_Cylinder_{cylinder}",
-                )
-                if (column := _find_column_case_insensitive(df, candidate)) is not None
-            ),
-            None,
-        )
+        calculated_column = _find_misfire_cylinder_column(df, cylinder)
         timer_column = next(
             (
                 column
@@ -379,26 +385,6 @@ def add_misfire_cylinders_feature(df: DataFrame) -> DataFrame:
         target_name,
         F.when(value_count > 0, value_sum / value_count),
     )
-
-
-def add_np_409_optimal_fuel_consumption_feature(df: DataFrame) -> DataFrame:
-    """Normalizza la metrica 1a_1 con il nome usato dal report NP 409."""
-    target_name = "optimal_specific_fuel_consumption_region_50_100_400_1800_rpm"
-    source_column = next(
-        (
-            column
-            for candidate in (
-                target_name,
-                "Optimal Specific Fuel Consumption Region (50-100 % / 400-1800 Rpm)",
-                "Optimal Specific Fuel Consumption Region (50-100 % / 400-1800 RPM)",
-            )
-            if (column := _find_column_case_insensitive(df, candidate)) is not None
-        ),
-        None,
-    )
-    if source_column is None:
-        return df
-    return df.withColumn(target_name, F.col(f"`{source_column}`").cast("double"))
 
 
 def _np_409_scope(df: DataFrame):

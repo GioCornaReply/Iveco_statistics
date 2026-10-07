@@ -37,6 +37,8 @@
 - Per percentuali di gruppi di colonne usare `pyspark_variabili_x()`.
 - Per sheet Mission Test usare `get_columns_for_sheet()`, `get_sheet_name_for_context()`, `get_sheet_settings()` e `get_default_sheet_ids()`.
 - Per VODR usare `get_vodr_report_sheets()`, `get_vodr_percentage_groups()` e `parse_config_text()`.
+- Prima di toccare la pipeline VODR su una nuova config, verificare: presenza di `Average_vehicle_speed`/`mileage` o `cov_div_len` nella fat table, e che `VODR_TO_MT_CONFIGS` abbia un mapping dedicato che agganci i VIN della config; in caso contrario `mission`/`mileage_range` resteranno NULL e tutti gli sheet con quei `group_by` saranno vuoti.
+- Per debug sheet vuoti VODR, usare la cella `diagnose_vodr_empty_sheets(df_time_percentage, config)` in fondo a `Main_pipeline_Vodr.ipynb`: stampa stato colonne sorgente, stato join MT e motivi del vuoto sheet per sheet.
 - Per export Excel riusare `export_excel_outputs()` e `prepare_excel_dataframe()` da `run_local_sample.py`.
 - Aggiungere test mirati in `tests/` quando si toccano mapping config, nomi export, sheet, parser o ordinamenti Excel.
 
@@ -59,6 +61,9 @@
 - Non lavorare direttamente su branch principale se la modifica e' ampia; creare un branch dedicato.
 - Prima di cambiare mapping legacy, verificare i test e, se possibile, confrontare con `Old_statistics/`.
 - VODR config `56` ha fat table su Unity Catalog ma usa il catalogo sheet **legacy** (`get_vodr_report_sheets()`): un tentativo di catalogo dedicato (`VODR_56_REPORT_SHEETS`) e' stato revertato il 2026-06-19; non reintrodurlo senza riallineare prima con il cliente.
+- Per VODR config `56` (Eurocargo MY24), la fat table `u_truck_analyzer_p.vodr_statistics.fat_table_56` non porta `Average_vehicle_speed`/`mileage`/`cov_div_len`: senza queste sorgenti, `add_legacy_preparation_features()` non puo' derivare `mission`/`mileage_range` e ~18 sheet con quei `group_by` restano vuoti. Inoltre il join Mission Test ricade su `DEFAULT_VODR_MT_CONFIGS` perche' manca un mapping dedicato `frozenset({56})` in `VODR_TO_MT_CONFIGS`: nessun VIN viene agganciato. Verificare entrambe le cose prima di toccare il codice (vedi handoff 2026-06-22 pomeriggio).
+- Per Mission Test `409` (S-WAY AS NP LATAM) la 1a e' divisa per tag Fly Recorder: `np_1a_1` (`region3`/`region4_torque_enginespeed`) e `np_409_1a_2` (`region1`, `region2`, `region3bis`, `region4bis`, con split `power`); non riattivare i fogli diesel `1a`/`1a_2` ne' l'overspeed in % (`engine_over_speed*`) per la 409. Vehicle Speed 409 = solo fasce `<20` e `20-40`.
+- Se una stessa variabile tecnica ha descrizioni diverse per config, usare in `VARIABLE_DISPLAY_NAMES` la chiave `<variabile>_<sheet_id>` invece di sovrascrivere quella generica.
 - La cartella locale `cestino/` (non tracciata) puo' contenere Excel di riferimento condivisi dal cliente; non committarla.
 
 ## Comandi Utili

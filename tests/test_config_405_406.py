@@ -230,18 +230,95 @@ class Config405406Test(unittest.TestCase):
         for sheet_id, columns in expected.items():
             self.assertEqual(get_columns_for_sheet(series, group, sheet_id), columns)
 
-    def test_409_np_adds_the_1a_1_optimal_fuel_consumption_sheet(self):
+    def test_409_np_splits_1a_by_fly_recorder_tag(self):
+        series = "S-WAY_AS_NP_MY22_LATAM"
+        group = "IVECO_S_WAY"
+
+        self.assertEqual(
+            get_columns_for_sheet(series, group, "np_1a_1"),
+            ["region3_torque_enginespeed", "region4_torque_enginespeed"],
+        )
+        self.assertEqual(
+            get_columns_for_sheet(series, group, "np_409_1a_2"),
+            [
+                "region1_torque_enginespeed",
+                "region2_torque_enginespeed",
+                "region3bis_torque_enginespeed",
+                "region4bis_torque_enginespeed",
+            ],
+        )
+        self.assertNotIn("power", get_sheet_settings("np_1a_1")["group_by"])
+        self.assertIn("power", get_sheet_settings("np_409_1a_2")["group_by"])
+        for sheet_id in ("np_1a_1", "np_409_1a_2"):
+            self.assertTrue(get_sheet_settings(sheet_id)["use_percentage_columns"])
+            self.assertLessEqual(len(get_sheet_settings(sheet_id)["name"]), 31)
+        # Le regioni diesel 1a collidono con quelle NP e non vanno esportate.
+        for sheet_id in ("1a", "1a_2"):
+            self.assertEqual(get_columns_for_sheet(series, group, sheet_id), [])
+        # Il tag 1a_2 non e' mappato su altre config.
+        self.assertEqual(
+            get_columns_for_sheet("S_WAY_NP_MY_2024", "IVECO_S_X_WAY_NP", "np_409_1a_2"),
+            [],
+        )
+
+    def test_409_np_1a_headers_use_catalog_item_names_without_touching_diesel(self):
+        df = pd.DataFrame(
+            {
+                "engine_model": ["Cursor 13"],
+                "REGION3_TORQUE_ENGINESPEED_NP_1A_1": [40.0],
+                "REGION1_TORQUE_ENGINESPEED_NP_409_1A_2": [10.0],
+                "REGION1_TORQUE_ENGINESPEED_1A_2": [10.0],
+            }
+        )
+
+        columns = list(prepare_excel_dataframe(df).columns)
+
+        self.assertEqual(
+            columns[1],
+            "Optimal specific fuel consumption region (50-100 % / 400-1800 rpm)",
+        )
+        self.assertEqual(
+            columns[2],
+            "Low load, low TVA percentage opening, high specific fuel consumption (0-30 % / 400-2500 rpm)",
+        )
+        self.assertNotIn("TVA", columns[3])
+
+    def test_409_np_vehicle_speed_and_overspeed_follow_np_reference(self):
+        series = "S-WAY_AS_NP_MY22_LATAM"
+        group = "IVECO_S_WAY"
+
+        self.assertEqual(get_columns_for_sheet(series, group, "average_vehicle_speed"), [])
+        self.assertEqual(
+            get_columns_for_sheet(series, group, "np_average_vehicle_speed"),
+            ["Average_vehicle_speed"],
+        )
+        for sheet_id in ("engine_over_speed", "engine_over_speed_2"):
+            self.assertEqual(get_columns_for_sheet(series, group, sheet_id), [])
+        self.assertEqual(
+            get_columns_for_sheet(series, group, "np_engine_overspeed"),
+            ["engineoverspeed"],
+        )
+
+    def test_409_np_catalyst_efficiency_exports_the_under_50_check_region(self):
+        self.assertIsNone(get_sheet_settings("np_409_4d")["target_columns"])
+        self.assertEqual(
+            get_columns_for_sheet("S-WAY_AS_NP_MY22_LATAM", "IVECO_S_WAY", "np_409_4d"),
+            ["reg1_Cat_Eff", "reg2_Cat_Eff", "reg3_Cat_Eff"],
+        )
+
+    def test_409_np_misfire_sheet_is_exported_with_calculated_sheets(self):
+        sheet_ids = get_default_sheet_ids()
+
         self.assertEqual(
             get_columns_for_sheet(
-                "S_WAY_AS_NP_MY22_LATAM", "IVECO_S_WAY", "np_1a_1"
+                "S-WAY_AS_NP_MY22_LATAM", "IVECO_S_WAY", "np_misfire_cylinders"
             ),
-            ["optimal_specific_fuel_consumption_region_50_100_400_1800_rpm"],
+            ["misfire_knocking_cylinders_min"],
         )
-        self.assertEqual(
-            get_sheet_settings("np_1a_1")["name"],
-            "1a_1 EngineTorque | EngineSpeed",
+        self.assertIn("mileage_range", get_sheet_settings("np_misfire_cylinders")["group_by"])
+        self.assertLess(
+            sheet_ids.index("np_misfire_cylinders"), sheet_ids.index("np_2a")
         )
-        self.assertLessEqual(len(get_sheet_settings("np_1a_1")["name"]), 31)
 
     def test_403_np_calculated_sheet_units_and_vehicle_speed_bands(self):
         series = "S_WAY_NP_MY_2024"
