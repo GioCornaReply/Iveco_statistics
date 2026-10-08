@@ -247,9 +247,11 @@ class Config405406Test(unittest.TestCase):
                 "region4bis_torque_enginespeed",
             ],
         )
-        self.assertNotIn("power", get_sheet_settings("np_1a_1")["group_by"])
-        self.assertIn("power", get_sheet_settings("np_409_1a_2")["group_by"])
         for sheet_id in ("np_1a_1", "np_409_1a_2"):
+            self.assertEqual(
+                get_sheet_settings(sheet_id)["group_by"],
+                ["engine_model", "power", "mission"],
+            )
             self.assertTrue(get_sheet_settings(sheet_id)["use_percentage_columns"])
             self.assertLessEqual(len(get_sheet_settings(sheet_id)["name"]), 31)
         # Le regioni diesel 1a collidono con quelle NP e non vanno esportate.

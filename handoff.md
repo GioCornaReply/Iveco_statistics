@@ -10,6 +10,12 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-10-08 - Claude (Opus 5.5) - branch `fix/mission-test-409-kpis`
+
+- **Obiettivo**: correzione richiesta dall'utente sulla 1a della 409.
+- **Fix**: `np_1a_1` e `np_409_1a_2` ora hanno `group_by = ["engine_model", "power", "mission"]` (prima `mileage_range`, con `power` solo su `_2`). Test `test_409_np_splits_1a_by_fly_recorder_tag` aggiornato.
+- **Test**: `pytest tests/test_config_405_406.py -k 409` -> 6 passed.
+
 ### 2026-10-07 - Claude (Opus 5.5) - branch `fix/mission-test-409-kpis`
 
 - **Obiettivo**: correggere gli errori 409 (S-WAY AS NP MY22 LATAM) emersi nella call di review dello Statistics.

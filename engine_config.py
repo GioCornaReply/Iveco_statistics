@@ -787,7 +787,7 @@ REPORT_SHEET_CONFIG = {
         "series": _np_409_series_columns(
             ["region3_torque_enginespeed", "region4_torque_enginespeed"]
         ),
-        "group_by": ["engine_model", "mileage_range"],
+        "group_by": ["engine_model", "power", "mission"],
         "triggers": [0, 1],
         "zero_as_null": False,
     },
@@ -801,7 +801,7 @@ REPORT_SHEET_CONFIG = {
                 "region4bis_torque_enginespeed",
             ]
         ),
-        "group_by": ["engine_model", "power", "mileage_range"],
+        "group_by": ["engine_model", "power", "mission"],
         "triggers": [1, 1, 0, 1],
         "zero_as_null": False,
     },
