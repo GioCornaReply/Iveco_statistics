@@ -133,7 +133,7 @@ def _np_403_scope(df: DataFrame):
     id_config = _find_column_case_insensitive(df, "id_config")
     if id_config is not None:
         scope = scope | F.coalesce(
-            F.col(f"`{id_config}`").cast("int") == F.lit(403), F.lit(False)
+            F.col(f"`{id_config}`").cast("int").isin(403), F.lit(False)
         )
 
     product_series = _find_column_case_insensitive(df, "product_series")

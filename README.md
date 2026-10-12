@@ -105,6 +105,7 @@ Per le richieste MY24 V1.6.4 C9, eseguire run separate dal widget `config`:
 405  # X-WAY MY24 AT/AD V1.6.4 C9
 406  # T-WAY MY24 V1.6.4 C9
 408  # Mission Test MY24 su Unity Catalog
+410  # Mission Test S-WAY NP MY24 C13 (profilo template NP)
 ```
 
 Per testare da notebook/driver Databricks con pochi sheet:

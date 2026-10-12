@@ -16,19 +16,25 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 - **Decisioni**:
   - La 410 riceve sia i profili NP MY24 (403) sia quelli 409 (1a split per tag, 4a, 4b, 4d): il template ha la struttura 409 e le KPI MY24.
   - Serie assunta `S_WAY_NP_MY24_C13` (nome template normalizzato). Dato non disponibile in locale: non verificabile prima del run su Databricks.
-  - Fuel: `fuel_lng` (kg) e `fuel_cng` escono entrambi per la 410.
+  - Fuel: `fuel_lng` (kg) e `fuel_cng` escono entrambi per la 410 (tre voci ciascuno, come CALCULATED_ITEMS del template).
+  - Allowlist `NP_410_TEMPLATE_SHEETS`: per la 410 esportano solo gli sheet che hanno una controparte nel template; gli altri restano vuoti (niente fallback MY24 sui diesel). Sheet 410 con colonne diverse dal template: `1b` (`region1..5_torque_vehiclespeed`) e `1c` (`engine_revolutions_OK/medium/high`) hanno colonne dedicate.
+  - Filtro record corrotti: la 410 entra nel scope 403 gia' tramite serie (`NP` + `MY24`) e in modo esplicito per `id_config`.
+  - Unita' `coverage_driven_length`: resta il `/1000` (come per la 403). La colonna "Operation new" del template omette il `/1000`, ma il suo esempio numerico e' incoerente: da verificare su Databricks.
 - **Azioni fatte**:
   - `engine_config.py`: `NP_410_SERIES`, aggiunta a `NP_REPORT_SERIES` e `NP_409_REPORT_SERIES`, `series_names` 410 sulle sheet NP 409, `fuel_lng` anche per 410.
   - `engine_cleaning.py`: `_np_409_scope` riconosce config 410 (oltre a 409) e la serie `S_WAY_NP_MY24_C13`.
   - `engine_loader.py`: 410 in `MISSION_TEST_STATISTICS_CONFIGS` e `CONFIG_METADATA` (`IVECO_S_X_WAY_NP`, export `HEAVY_SWAY_NP`).
-  - `tests/test_config_410.py`: 8 test (routing, metadata/export, 1a split, diesel skip, fuel LNG/CNG, KPI e catalyst split, nomi sheet, non-contaminazione 403).
+  - `tests/test_config_410.py`: 10 test (routing, metadata/export, 1a split, diesel skip, fuel LNG/CNG a tre voci, 1b/1c dal template, allowlist template, KPI e catalyst split, nomi sheet, non-contaminazione 403).
 - **Test/verifiche**:
-  - `pytest tests`: 40 passed, 3 failed, 13 errors. Stesso esito di HEAD (3 failed + 13 errori) piu' gli 8 nuovi test passanti. I fallimenti sono preesistenti (`test_403_np_calculated_sheet_units_and_vehicle_speed_bands`, due test Excel su `mileage range`, errori Spark `WinError 6` in questo terminale).
+  - `pytest tests`: 42 passed, 3 failed, 13 errors. Stesso set di fallimenti di HEAD (3 failed + 13 errori); i nuovi test passano. I fallimenti sono preesistenti (`test_403_np_calculated_sheet_units_and_vehicle_speed_bands`, due test Excel su `mileage range`, errori Spark `WinError 6` in questo terminale).
   - Non verificato: calcoli Spark delle feature 410 (servono i test Spark, non eseguibili qui) e colonne reali della fat table 410.
 - **Prossimi passi (su Databricks)**:
   1. Pull del branch e run `Main_pipeline_modular.ipynb` con `input_mode=fat_table`, `config=410`.
   2. Controllare il `product_series` stampato e che gli sheet `np_1a_1`, `np_409_1a_2`, `np_409_4a_*`, `np_409_4d`, `fuel_lng`, `fuel_cng` non siano vuoti.
   3. Se una colonna del template non esiste nella fat table 410, segnalarla: va aggiunta alla feature calcolata o alla lista colonne.
+  4. Gap noti rispetto al template (non coperti dal codice): sheet `2d` (ambient pressure per regione), `3d` (gas rail reg4/5), `5a`/`5d`/`5e` (engine mode, intake low, boost per regione), `4c` (catalyst upstream 600-860), `6) Maximum Values` nella forma del template, misfire 3h-3o per regione di modo motore (per la 410 esce il calcolato `misfire_knocking_cylinders_min`). Decidere se servono nuovi sheet.
+  5. Config `402` (stesso SW G35.1/G40.2 del template, da Index) e' instradata ma non ha `CONFIG_METADATA`: confermare se serve lo stesso profilo 410.
+  6. Su Databricks: lo sheet 4e/4f deve usare i nomi `urea_dep_*`/`urea_p_*` come la 403; i sheet AdBlue (`urea_consumption_*`) non sono nel template della 410 e sono esclusi.
 
 ### 2026-10-08 - Claude (Opus 5.5) - branch `fix/mission-test-409-kpis`
 

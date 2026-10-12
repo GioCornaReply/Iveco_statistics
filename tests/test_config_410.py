@@ -62,10 +62,53 @@ class Config410Test(unittest.TestCase):
                 "Tot_fuel_LNG",
             ],
         )
-        self.assertIn(
-            "average_fuel_consumption_CNG_kml",
+        self.assertEqual(
             get_columns_for_sheet(SERIES_410, GROUP_410, "fuel_cng"),
+            [
+                "average_fuel_consumption_CNG_kml",
+                "average_fuel_consumption_CNG_l100km",
+                "Tot_fuel_CNG",
+            ],
         )
+
+    def test_410_regions_and_engine_speed_follow_template_names(self):
+        self.assertEqual(
+            get_columns_for_sheet(SERIES_410, GROUP_410, "1b"),
+            [
+                "region1_torque_vehiclespeed",
+                "region2_torque_vehiclespeed",
+                "region3_torque_vehiclespeed",
+                "region4_torque_vehiclespeed",
+                "region5_torque_vehiclespeed",
+            ],
+        )
+        self.assertEqual(
+            get_columns_for_sheet(SERIES_410, GROUP_410, "1c"),
+            ["engine_revolutions_OK", "engine_revolutions_medium", "engine_revolutions_high"],
+        )
+        # 403 e 409 mantengono i propri nomi.
+        self.assertEqual(
+            get_columns_for_sheet("S_WAY_NP_MY_2024", GROUP_410, "1c")[0],
+            "eng_speed_1",
+        )
+        self.assertEqual(
+            get_columns_for_sheet("S_WAY_AS_NP_MY22_LATAM", "IVECO_S_WAY", "1b")[0],
+            "region1_torque_vehiclespeed",
+        )
+
+    def test_410_exports_only_sheets_present_in_template(self):
+        from engine_config import NP_410_TEMPLATE_SHEETS
+
+        leaked = [
+            sheet_id
+            for sheet_id in get_default_sheet_ids()
+            if sheet_id not in NP_410_TEMPLATE_SHEETS
+            and get_columns_for_sheet(SERIES_410, GROUP_410, sheet_id)
+        ]
+        self.assertEqual(leaked, [])
+        # Sheet diesel/MY24 senza controparte nel template restano vuoti.
+        for sheet_id in ("up_downstream_temperatures", "max_values", "turbocharger_revolutions", "urea_consumption_pct", "3a_1", "5b"):
+            self.assertEqual(get_columns_for_sheet(SERIES_410, GROUP_410, sheet_id), [], sheet_id)
 
     def test_410_receives_the_np_my24_kpi_sheets_and_catalyst_split(self):
         self.assertEqual(

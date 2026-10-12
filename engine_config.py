@@ -26,6 +26,51 @@ NP_REPORT_SERIES = (NP_403_SERIES, NP_409_SERIES, NP_409_SOURCE_SERIES, NP_410_S
 NP_409_SERIES_ALIASES = set(NP_409_REPORT_SERIES)
 
 
+# Sheet esportati per la 410: solo quelli presenti nel template S-WAY_NP_MY24_C13
+# (CALCULATED_ITEMS / TABLES_AND_PROGRESS_BAR). Gli altri sheet NP MY24/409 non
+# hanno una controparte nel template e restano vuoti per la 410.
+NP_410_TEMPLATE_SHEETS = {
+    "fuel_lng",
+    "fuel_cng",
+    "np_average_vehicle_speed",
+    "average_start",
+    "average_crank_per_100km",
+    "average_crank_per_100km_2",
+    "1a",
+    "1a_2",
+    "np_1a_1",
+    "np_409_1a_2",
+    "1b",
+    "1c",
+    "4e",
+    "4f",
+    "np_engine_lifecycle",
+    "np_engine_overspeed",
+    "np_catalyst_temperature",
+    "np_low_catalyst_efficiency",
+    "np_coolant_temperature_high",
+    "np_oil_temperature_high",
+    "np_boost_pressure_high",
+    "np_ambient_pressure_low",
+    "np_oil_pressure_low",
+    "np_misfire_cylinders",
+    "np_2a",
+    "np_2b",
+    "np_2c",
+    "np_3a",
+    "np_3c",
+    "np_3e",
+    "np_3f",
+    "np_3g",
+    "np_3h_o_cylinders",
+    "np_409_4a_1",
+    "np_409_4a_2",
+    "np_409_4b",
+    "np_409_4d",
+    "np_5c",
+}
+
+
 def _np_series_columns(columns):
     """Applica la stessa metrica NP alle serie MY24 e S-WAY NP LATAM."""
     return {series: columns for series in NP_REPORT_SERIES}
@@ -412,6 +457,11 @@ REPORT_SHEET_CONFIG = {
                 ]
             ),
             **_np_409_series_columns(["average_fuel_consumption_CNG_kml"]),
+            NP_410_SERIES: [
+                "average_fuel_consumption_CNG_kml",
+                "average_fuel_consumption_CNG_l100km",
+                "Tot_fuel_CNG",
+            ],
         },
         "group_by": ["product_model", "power", "axle_description", "mission"],
         "triggers": [0, 0, 0],
@@ -928,6 +978,16 @@ REPORT_SHEET_CONFIG = {
         "name": "1b) Engine Torque-Veh Speed",
         "group_by": ["engine_model", "power", "mission"],
         "triggers": [0, 1, 1, 1, 1, 0, 0, 0, 1],
+        # 410: le 5 regioni del template (triggers posizionali, primi 5).
+        "series": {
+            NP_410_SERIES: [
+                "region1_torque_vehiclespeed",
+                "region2_torque_vehiclespeed",
+                "region3_torque_vehiclespeed",
+                "region4_torque_vehiclespeed",
+                "region5_torque_vehiclespeed",
+            ]
+        },
         "groups": {
             "EUROCARGO": [
                 "tor_speed_cutoff",
@@ -968,6 +1028,14 @@ REPORT_SHEET_CONFIG = {
         "name": "1c) Engine revolutions",
         "group_by": ["engine_model"],
         "triggers": [1, 0, 1, 1, 1],
+        # 410: OK / medium / high del template (triggers posizionali, primi 3).
+        "series": {
+            NP_410_SERIES: [
+                "engine_revolutions_OK",
+                "engine_revolutions_medium",
+                "engine_revolutions_high",
+            ]
+        },
         "groups": {"EUROCARGO": ["eng_speed_1", "eng_speed_2", "eng_speed_3"]},
         "new_layout": ["eng_speed_1", "eng_speed_2", "eng_speed_3", "eng_speed_4", "eng_speed_5"],
         "legacy": [
@@ -1423,6 +1491,9 @@ def get_columns_for_sheet(p_series, p_group, sheet_id, available_columns=None):
 
     p_series = normalize_metadata_key(p_series)
     p_group = normalize_metadata_key(p_group)
+
+    if p_series == NP_410_SERIES and sheet_id not in NP_410_TEMPLATE_SHEETS:
+        return []
 
     if p_series in conf.get("skip_series", set()) or p_group in conf.get("skip_groups", set()):
         return []
