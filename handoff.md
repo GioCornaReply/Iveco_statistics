@@ -17,14 +17,14 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
   - La 410 riceve sia i profili NP MY24 (403) sia quelli 409 (1a split per tag, 4a, 4b, 4d): il template ha la struttura 409 e le KPI MY24.
   - Serie assunta `S_WAY_NP_MY24_C13` (nome template normalizzato). Dato non disponibile in locale: non verificabile prima del run su Databricks.
   - Fuel: `fuel_lng` (kg) e `fuel_cng` escono entrambi per la 410 (tre voci ciascuno, come CALCULATED_ITEMS del template).
-  - Allowlist `NP_410_TEMPLATE_SHEETS`: per la 410 esportano solo gli sheet che hanno una controparte nel template; gli altri restano vuoti (niente fallback MY24 sui diesel). Sheet 410 con colonne diverse dal template: `1b` (`region1..5_torque_vehiclespeed`) e `1c` (`engine_revolutions_OK/medium/high`) hanno colonne dedicate.
+  - La 410 eredita le colonne della 403 (profilo NP MY24) dove non ha una regola propria, rispettando gli skip della 403 (`2a`, `2b` restano esclusi). Override dal template: `1b` (`region1..5_torque_vehiclespeed`), `1c` (`engine_revolutions_OK/medium/high`), `3a` (+`fueltemp_magg_0`). `np_4d` non esce per la 410 perche' duplicherebbe `np_409_4d` (stesse colonne `reg*_Cat_Eff`). Richiesta utente: sheet in piu' rispetto al template vanno esportati comunque e tolti a mano se non servono.
   - Filtro record corrotti: la 410 entra nel scope 403 gia' tramite serie (`NP` + `MY24`) e in modo esplicito per `id_config`.
   - Unita' `coverage_driven_length`: resta il `/1000` (come per la 403). La colonna "Operation new" del template omette il `/1000`, ma il suo esempio numerico e' incoerente: da verificare su Databricks.
 - **Azioni fatte**:
   - `engine_config.py`: `NP_410_SERIES`, aggiunta a `NP_REPORT_SERIES` e `NP_409_REPORT_SERIES`, `series_names` 410 sulle sheet NP 409, `fuel_lng` anche per 410.
   - `engine_cleaning.py`: `_np_409_scope` riconosce config 410 (oltre a 409) e la serie `S_WAY_NP_MY24_C13`.
   - `engine_loader.py`: 410 in `MISSION_TEST_STATISTICS_CONFIGS` e `CONFIG_METADATA` (`IVECO_S_X_WAY_NP`, export `HEAVY_SWAY_NP`).
-  - `tests/test_config_410.py`: 10 test (routing, metadata/export, 1a split, diesel skip, fuel LNG/CNG a tre voci, 1b/1c dal template, allowlist template, KPI e catalyst split, nomi sheet, non-contaminazione 403).
+  - `tests/test_config_410.py`: 10 test (routing, metadata/export, 1a split, diesel skip, fuel LNG/CNG a tre voci, 1b/1c dal template, ereditarieta' dalla 403, KPI e catalyst split, nomi sheet, non-contaminazione 403).
 - **Test/verifiche**:
   - `pytest tests`: 42 passed, 3 failed, 13 errors. Stesso set di fallimenti di HEAD (3 failed + 13 errori); i nuovi test passano. I fallimenti sono preesistenti (`test_403_np_calculated_sheet_units_and_vehicle_speed_bands`, due test Excel su `mileage range`, errori Spark `WinError 6` in questo terminale).
   - Non verificato: calcoli Spark delle feature 410 (servono i test Spark, non eseguibili qui) e colonne reali della fat table 410.

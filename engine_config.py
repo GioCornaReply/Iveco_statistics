@@ -26,51 +26,6 @@ NP_REPORT_SERIES = (NP_403_SERIES, NP_409_SERIES, NP_409_SOURCE_SERIES, NP_410_S
 NP_409_SERIES_ALIASES = set(NP_409_REPORT_SERIES)
 
 
-# Sheet esportati per la 410: solo quelli presenti nel template S-WAY_NP_MY24_C13
-# (CALCULATED_ITEMS / TABLES_AND_PROGRESS_BAR). Gli altri sheet NP MY24/409 non
-# hanno una controparte nel template e restano vuoti per la 410.
-NP_410_TEMPLATE_SHEETS = {
-    "fuel_lng",
-    "fuel_cng",
-    "np_average_vehicle_speed",
-    "average_start",
-    "average_crank_per_100km",
-    "average_crank_per_100km_2",
-    "1a",
-    "1a_2",
-    "np_1a_1",
-    "np_409_1a_2",
-    "1b",
-    "1c",
-    "4e",
-    "4f",
-    "np_engine_lifecycle",
-    "np_engine_overspeed",
-    "np_catalyst_temperature",
-    "np_low_catalyst_efficiency",
-    "np_coolant_temperature_high",
-    "np_oil_temperature_high",
-    "np_boost_pressure_high",
-    "np_ambient_pressure_low",
-    "np_oil_pressure_low",
-    "np_misfire_cylinders",
-    "np_2a",
-    "np_2b",
-    "np_2c",
-    "np_3a",
-    "np_3c",
-    "np_3e",
-    "np_3f",
-    "np_3g",
-    "np_3h_o_cylinders",
-    "np_409_4a_1",
-    "np_409_4a_2",
-    "np_409_4b",
-    "np_409_4d",
-    "np_5c",
-}
-
-
 def _np_series_columns(columns):
     """Applica la stessa metrica NP alle serie MY24 e S-WAY NP LATAM."""
     return {series: columns for series in NP_REPORT_SERIES}
@@ -1127,7 +1082,8 @@ REPORT_SHEET_CONFIG = {
         "groups": {"EUROCARGO": ["fuel_t_1", "fuel_t_2", "fuel_t_3"]},
         "new_layout": ["fuel_t_1", "fuel_t_2", "fuel_t_3"],
         "legacy": ["fueltemp1", "fueltemp2", "fueltemp3"],
-        "skip_series": NP_409_SERIES_ALIASES,
+        # La 410 eredita fuel_t_1..3 dalla 403: escluse solo le serie 409.
+        "skip_series": {NP_409_SERIES, NP_409_SOURCE_SERIES},
     },
     "3c": {
         "name": "3d) Intake air temperature",
@@ -1492,15 +1448,23 @@ def get_columns_for_sheet(p_series, p_group, sheet_id, available_columns=None):
     p_series = normalize_metadata_key(p_series)
     p_group = normalize_metadata_key(p_group)
 
-    if p_series == NP_410_SERIES and sheet_id not in NP_410_TEMPLATE_SHEETS:
+    skip_series = conf.get("skip_series", set())
+    if p_series in skip_series or p_group in conf.get("skip_groups", set()):
         return []
 
-    if p_series in conf.get("skip_series", set()) or p_group in conf.get("skip_groups", set()):
-        return []
-
-    series_cols = conf.get("series", {}).get(p_series)
+    series_map = conf.get("series", {})
+    series_cols = series_map.get(p_series)
     if series_cols:
         return series_cols
+
+    # La 410 segue le regole della 403 (stesso profilo NP MY24) dove non ha una
+    # regola propria: se la 403 e' esclusa dallo sheet, lo e' anche la 410.
+    if p_series == NP_410_SERIES:
+        if NP_403_SERIES in skip_series:
+            return []
+        series_cols = series_map.get(NP_403_SERIES)
+        if series_cols:
+            return series_cols
 
     group_cols = conf.get("groups", {}).get(p_group)
     if group_cols:

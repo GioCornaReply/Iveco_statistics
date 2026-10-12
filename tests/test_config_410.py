@@ -96,19 +96,32 @@ class Config410Test(unittest.TestCase):
             "region1_torque_vehiclespeed",
         )
 
-    def test_410_exports_only_sheets_present_in_template(self):
-        from engine_config import NP_410_TEMPLATE_SHEETS
-
-        leaked = [
-            sheet_id
-            for sheet_id in get_default_sheet_ids()
-            if sheet_id not in NP_410_TEMPLATE_SHEETS
-            and get_columns_for_sheet(SERIES_410, GROUP_410, sheet_id)
-        ]
-        self.assertEqual(leaked, [])
-        # Sheet diesel/MY24 senza controparte nel template restano vuoti.
-        for sheet_id in ("up_downstream_temperatures", "max_values", "turbocharger_revolutions", "urea_consumption_pct", "3a_1", "5b"):
+    def test_410_inherits_403_columns_where_it_has_no_own_rule(self):
+        # Le colonne della 403 sono il default NP MY24: la 410 le riceve dove il
+        # template non ha una regola propria; gli sheet in piu' si tolgono a mano.
+        for sheet_id in (
+            "urea_consumption_pct",
+            "urea_consumption_l100km",
+            "urea_consumption_l100km_2",
+            "average_crank_per_hour",
+            "up_downstream_temperatures",
+            "catalyst_info_v2",
+            "max_values",
+            "turbocharger_revolutions",
+            "3b",
+            "3d",
+            "5b",
+        ):
+            self.assertEqual(
+                get_columns_for_sheet(SERIES_410, GROUP_410, sheet_id),
+                get_columns_for_sheet("S_WAY_NP_MY_2024", GROUP_410, sheet_id),
+                sheet_id,
+            )
+        # Sheet MY24 gia' esclusi per la 403 restano esclusi anche per la 410.
+        for sheet_id in ("2a", "2b"):
             self.assertEqual(get_columns_for_sheet(SERIES_410, GROUP_410, sheet_id), [], sheet_id)
+        # np_4d duplica np_409_4d (stesse colonne reg1..3_Cat_Eff): esporta solo quello.
+        self.assertEqual(get_columns_for_sheet(SERIES_410, GROUP_410, "np_4d"), [])
 
     def test_410_receives_the_np_my24_kpi_sheets_and_catalyst_split(self):
         self.assertEqual(
