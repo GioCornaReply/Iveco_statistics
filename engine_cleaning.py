@@ -388,12 +388,12 @@ def add_misfire_cylinders_feature(df: DataFrame) -> DataFrame:
 
 
 def _np_409_scope(df: DataFrame):
-    """Identifica le righe 409 senza coinvolgere le altre serie NP."""
+    """Identifica le righe 409 e 410 (profilo 1a/4a/4d) senza coinvolgere la 403."""
     scope = F.lit(False)
     config_column = _find_column_case_insensitive(df, "id_config")
     if config_column is not None:
         scope = scope | F.coalesce(
-            F.col(f"`{config_column}`").cast("int") == F.lit(409), F.lit(False)
+            F.col(f"`{config_column}`").cast("int").isin(409, 410), F.lit(False)
         )
 
     series_column = _find_column_case_insensitive(df, "product_series")
@@ -401,7 +401,8 @@ def _np_409_scope(df: DataFrame):
         series = F.upper(F.col(f"`{series_column}`").cast("string"))
         scope = scope | F.coalesce(
             series.contains("S_WAY_AS_NP_MY22_LATAM")
-            | series.contains("S_WAY_AS_NP_LATAM"),
+            | series.contains("S_WAY_AS_NP_LATAM")
+            | series.contains("S_WAY_NP_MY24_C13"),
             F.lit(False),
         )
     return scope

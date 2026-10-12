@@ -10,6 +10,26 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-10-12 - Claude (Haiku 5.5) - branch `feat/mission-test-410`
+
+- **Obiettivo**: far uscire la config Mission Test `410` (S-WAY NP MY24 C13) con gli sheet e le colonne del template `1_template_colonne/template S-WAY_NP_MY24_C13.xlsx`.
+- **Decisioni**:
+  - La 410 riceve sia i profili NP MY24 (403) sia quelli 409 (1a split per tag, 4a, 4b, 4d): il template ha la struttura 409 e le KPI MY24.
+  - Serie assunta `S_WAY_NP_MY24_C13` (nome template normalizzato). Dato non disponibile in locale: non verificabile prima del run su Databricks.
+  - Fuel: `fuel_lng` (kg) e `fuel_cng` escono entrambi per la 410.
+- **Azioni fatte**:
+  - `engine_config.py`: `NP_410_SERIES`, aggiunta a `NP_REPORT_SERIES` e `NP_409_REPORT_SERIES`, `series_names` 410 sulle sheet NP 409, `fuel_lng` anche per 410.
+  - `engine_cleaning.py`: `_np_409_scope` riconosce config 410 (oltre a 409) e la serie `S_WAY_NP_MY24_C13`.
+  - `engine_loader.py`: 410 in `MISSION_TEST_STATISTICS_CONFIGS` e `CONFIG_METADATA` (`IVECO_S_X_WAY_NP`, export `HEAVY_SWAY_NP`).
+  - `tests/test_config_410.py`: 8 test (routing, metadata/export, 1a split, diesel skip, fuel LNG/CNG, KPI e catalyst split, nomi sheet, non-contaminazione 403).
+- **Test/verifiche**:
+  - `pytest tests`: 40 passed, 3 failed, 13 errors. Stesso esito di HEAD (3 failed + 13 errori) piu' gli 8 nuovi test passanti. I fallimenti sono preesistenti (`test_403_np_calculated_sheet_units_and_vehicle_speed_bands`, due test Excel su `mileage range`, errori Spark `WinError 6` in questo terminale).
+  - Non verificato: calcoli Spark delle feature 410 (servono i test Spark, non eseguibili qui) e colonne reali della fat table 410.
+- **Prossimi passi (su Databricks)**:
+  1. Pull del branch e run `Main_pipeline_modular.ipynb` con `input_mode=fat_table`, `config=410`.
+  2. Controllare il `product_series` stampato e che gli sheet `np_1a_1`, `np_409_1a_2`, `np_409_4a_*`, `np_409_4d`, `fuel_lng`, `fuel_cng` non siano vuoti.
+  3. Se una colonna del template non esiste nella fat table 410, segnalarla: va aggiunta alla feature calcolata o alla lista colonne.
+
 ### 2026-10-08 - Claude (Opus 5.5) - branch `fix/mission-test-409-kpis`
 
 - **Obiettivo**: correzione richiesta dall'utente sulla 1a della 409.

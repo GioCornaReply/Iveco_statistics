@@ -16,8 +16,13 @@ NEW_LAYOUT_SERIES = {
 NP_403_SERIES = "S_WAY_NP_MY_2024"
 NP_409_SERIES = "S_WAY_AS_NP_MY22_LATAM"
 NP_409_SOURCE_SERIES = "S_WAY_AS_NP_LATAM"
-NP_409_REPORT_SERIES = (NP_409_SERIES, NP_409_SOURCE_SERIES)
-NP_REPORT_SERIES = (NP_403_SERIES, NP_409_SERIES, NP_409_SOURCE_SERIES)
+# S-WAY NP MY24 C13 (template 1_template_colonne/template S-WAY_NP_MY24_C13.xlsx).
+# Serie normalizzata dal nome template: da confermare sulla fat table 410.
+NP_410_SERIES = "S_WAY_NP_MY24_C13"
+# La 410 ha la struttura 1a/4a/4d della 409 e le KPI MY24 della 403: riceve entrambi i profili.
+NP_409_REPORT_SERIES = (NP_409_SERIES, NP_409_SOURCE_SERIES, NP_410_SERIES)
+NP_REPORT_SERIES = (NP_403_SERIES, NP_409_SERIES, NP_409_SOURCE_SERIES, NP_410_SERIES)
+# Serie che non devono ricevere i fogli diesel 1a/1a_2 (nome 409 storico).
 NP_409_SERIES_ALIASES = set(NP_409_REPORT_SERIES)
 
 
@@ -384,7 +389,12 @@ REPORT_SHEET_CONFIG = {
                 "average_fuel_consumption_kml",
                 "average_fuel_consumption_l100km",
                 "Tot_fuel_LNG",
-            ]
+            ],
+            NP_410_SERIES: [
+                "average_fuel_consumption_kml",
+                "average_fuel_consumption_l100km",
+                "Tot_fuel_LNG",
+            ],
         },
         "group_by": ["product_model", "power", "axle_description", "mission"],
         "triggers": [0, 0, 0],
@@ -453,6 +463,7 @@ REPORT_SHEET_CONFIG = {
         "series_names": {
             NP_409_SERIES: "Average Vehicle Speed (2)",
             NP_409_SOURCE_SERIES: "Average Vehicle Speed (2)",
+            NP_410_SERIES: "Average Vehicle Speed (2)",
         },
         "use_percentage_columns": False,
         "columns": ["Average_vehicle_speed"],
@@ -609,7 +620,7 @@ REPORT_SHEET_CONFIG = {
     },
     "np_engine_lifecycle": {
         "name": "Engine Life Cycle (%)",
-        "series_names": {NP_409_SERIES: "Engine Life Cycle", NP_409_SOURCE_SERIES: "Engine Life Cycle"},
+        "series_names": {NP_409_SERIES: "Engine Life Cycle", NP_409_SOURCE_SERIES: "Engine Life Cycle", NP_410_SERIES: "Engine Life Cycle"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["engine_life_cycle"]),
         "group_by": ["mileage_range"],
@@ -618,7 +629,7 @@ REPORT_SHEET_CONFIG = {
     },
     "np_engine_overspeed": {
         "name": "Engine overspeed >2660 rpm",
-        "series_names": {NP_409_SERIES: "Engine Overspeed", NP_409_SOURCE_SERIES: "Engine Overspeed"},
+        "series_names": {NP_409_SERIES: "Engine Overspeed", NP_409_SOURCE_SERIES: "Engine Overspeed", NP_410_SERIES: "Engine Overspeed"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["engineoverspeed"]),
         "group_by": ["engine_model"],
@@ -627,7 +638,7 @@ REPORT_SHEET_CONFIG = {
     },
     "np_catalyst_temperature": {
         "name": "Catalyst temperature >860 C",
-        "series_names": {NP_409_SERIES: "Catalyst Temperature", NP_409_SOURCE_SERIES: "Catalyst Temperature"},
+        "series_names": {NP_409_SERIES: "Catalyst Temperature", NP_409_SOURCE_SERIES: "Catalyst Temperature", NP_410_SERIES: "Catalyst Temperature"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Catalyst_temp_860"]),
         "group_by": ["engine_model"],
@@ -644,7 +655,7 @@ REPORT_SHEET_CONFIG = {
     },
     "np_coolant_temperature_high": {
         "name": "High coolant temp >104 C",
-        "series_names": {NP_409_SERIES: "Engine Coolant Temperature", NP_409_SOURCE_SERIES: "Engine Coolant Temperature"},
+        "series_names": {NP_409_SERIES: "Engine Coolant Temperature", NP_409_SOURCE_SERIES: "Engine Coolant Temperature", NP_410_SERIES: "Engine Coolant Temperature"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Coolant_temp_high_104"]),
         "group_by": ["engine_model"],
@@ -653,7 +664,7 @@ REPORT_SHEET_CONFIG = {
     },
     "np_oil_temperature_high": {
         "name": "High oil temp >120 C",
-        "series_names": {NP_409_SERIES: "Oil Temperature (Low, High)", NP_409_SOURCE_SERIES: "Oil Temperature (Low, High)"},
+        "series_names": {NP_409_SERIES: "Oil Temperature (Low, High)", NP_409_SOURCE_SERIES: "Oil Temperature (Low, High)", NP_410_SERIES: "Oil Temperature (Low, High)"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Oil_temp_high_120"]),
         "group_by": ["engine_model"],
@@ -662,7 +673,7 @@ REPORT_SHEET_CONFIG = {
     },
     "np_boost_pressure_high": {
         "name": "High boost pressure >2.5 bar",
-        "series_names": {NP_409_SERIES: "Boost Pressure", NP_409_SOURCE_SERIES: "Boost Pressure"},
+        "series_names": {NP_409_SERIES: "Boost Pressure", NP_409_SOURCE_SERIES: "Boost Pressure", NP_410_SERIES: "Boost Pressure"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Boost_pressure_high_25"]),
         "group_by": ["engine_model"],
@@ -671,7 +682,7 @@ REPORT_SHEET_CONFIG = {
     },
     "np_ambient_pressure_low": {
         "name": "Low ambient pressure <850 mbar",
-        "series_names": {NP_409_SERIES: "Ambient Pressure", NP_409_SOURCE_SERIES: "Ambient Pressure"},
+        "series_names": {NP_409_SERIES: "Ambient Pressure", NP_409_SOURCE_SERIES: "Ambient Pressure", NP_410_SERIES: "Ambient Pressure"},
         "use_percentage_columns": False,
         "series": _np_series_columns(["Ambient_pressure_low_850"]),
         "group_by": ["product_group"],
@@ -736,6 +747,7 @@ REPORT_SHEET_CONFIG = {
         "series_names": {
             NP_409_SERIES: "3e ETAS | Rail Pressure",
             NP_409_SOURCE_SERIES: "3e ETAS | Rail Pressure",
+            NP_410_SERIES: "3e ETAS | Rail Pressure",
         },
         "series": _np_series_columns(
             [
