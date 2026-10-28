@@ -240,7 +240,7 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
     """Ricrea localmente alcune colonne prodotte dal vecchio notebook Prep."""
     df = _coalesce_legacy_statistics_columns(df)
 
-    if "product_model" in df.columns:
+    if any(name in df.columns for name in ("product_model", *ENGINE_SOURCE_COLUMNS)):
         df = engine_model_standard(df)
 
     if "Average_vehicle_speed" in df.columns:
@@ -663,9 +663,29 @@ def _fill_derived_column(df: DataFrame, col_name: str, expr, replace_values=()) 
 
 # --- NORMALIZZAZIONE MODELLI MOTORE ---
 
+# Colonne che nel Daily (F1A/F1C) riportano il codice motore quando product_model non basta.
+ENGINE_SOURCE_COLUMNS = ("engine_type", "engine_code")
+
+
 def engine_model_standard(df: DataFrame) -> DataFrame:
     """Mappatura standard per i modelli motore basata sui codici prodotto."""
-    product_model = F.upper(F.coalesce(F.col("product_model").cast("string"), F.lit("")))
+    if "product_model" in df.columns:
+        product_model = F.upper(F.coalesce(F.col("product_model").cast("string"), F.lit("")))
+    else:
+        product_model = F.lit("")
+    # Daily: il legacy ricavava F1A/F1C con una regex su engine_type.
+    engine_source = F.upper(
+        F.concat_ws(
+            " ",
+            *[
+                F.coalesce(F.col(name).cast("string"), F.lit(""))
+                for name in ENGINE_SOURCE_COLUMNS
+                if name in df.columns
+            ],
+        )
+        if any(name in df.columns for name in ENGINE_SOURCE_COLUMNS)
+        else F.lit("")
+    )
     power = (
         F.upper(F.coalesce(F.col("power").cast("string"), F.lit("")))
         if "power" in df.columns
@@ -673,8 +693,8 @@ def engine_model_standard(df: DataFrame) -> DataFrame:
     )
 
     derived_engine = (
-        F.when(product_model.startswith("F1A"), "F1A")
-        .when(product_model.startswith("F1C"), "F1C")
+        F.when(product_model.startswith("F1A") | engine_source.contains("F1A"), "F1A")
+        .when(product_model.startswith("F1C") | engine_source.contains("F1C"), "F1C")
         .when(product_model.startswith("F4AF"), "Tector 5")
         .when(product_model.startswith("F4BE"), "Tector 7")
         .when(product_model.startswith("F2BE") | product_model.contains("C9") | power.contains("C9"), "Cursor 9")

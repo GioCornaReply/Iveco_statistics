@@ -115,6 +115,15 @@ class DailyQualityFilterAgeTest(unittest.TestCase):
         self.assertTrue(sheet_name.startswith("1b)"))
 
 
+    def test_engine_model_is_derived_from_engine_type_when_product_model_is_unhelpful(self):
+        df = self.spark.createDataFrame(
+            [("V1", "DAILY 35S", "F1AGL411A", None), ("V2", None, "xx F1CE3481 yy", "C13"), ("V3", None, None, None)],
+            "vin string, product_model string, engine_type string, engine_code string",
+        )
+        df = add_legacy_preparation_features(df)
+        engines = {row["vin"]: row["engine_model"] for row in df.select("vin", "engine_model").collect()}
+        self.assertEqual(engines, {"V1": "F1A", "V2": "F1C", "V3": "Unknown"})
+
     def test_light_report_matches_past_example_layout(self):
         import tempfile
         import pandas as pd
