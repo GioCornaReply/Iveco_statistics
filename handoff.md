@@ -18,7 +18,10 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
   - Cella export: se nessuno sheet e' prodotto, stampa `DIAGNOSI` (metadata, righe raw vs dopo filtri, colonne) e solleva errore chiaro.
   - Widget `max_data_age_days` (default 366, `0` = nessun limite); `apply_statistics_quality_filters` accetta `None`/`<=0` per disattivare il filtro eta'.
   - Layout Daily MY24: serie `DAILY_MY24`, gruppo `IVECO_DAILY`, metadata 382/384 in `CONFIG_METADATA`, export `Statistics_DAILY_<config>_dataset.xlsx`. 23 sheet `daily_*` (1a..6b, 89 variabili) generati da `DAILY_MY24_CATALOG` in `engine_config.py`, fonte il foglio "TABLES AND PROGRESS BAR" dei template in `382_384_daily_disel/` (non tracciata, non committare).
-  - Test: `tests/test_config_daily_my24.py`.
+  - Report di riferimento passato `Statistics_LIGHT_382_384_Daily_MY_2024_new_thresholds (7).xlsx` (in `382_384_daily_disel/`): 6 sheet, ora i soli default Daily: `Engine Speed vs Torque F1A/F1C` (rev_tor_*), `Engine Torque F1A/F1C` (torque_*), `Battery Voltage`, `Battery SOC`. 1a/1c: righe per `engine_model`+`power`, filtro motore via `allowed_group_values`; batteria: riga per `mileage_split`, header = item name del template (doppio spazio dopo "region" mantenuto). I 23 sheet del catalogo restano registrati (`daily_*`) ma fuori dal default.
+  - Fix `clean_excel_column_name`: senza item name il fallback toglie il suffisso sheet dal nome colonna.
+  - Stile header: il runner usa Title Case (`Engine Model`, `Rev Tor Idle`), l'esempio passato era in MAIUSCOLO (`ENGINE`).
+  - Test: `tests/test_config_daily_my24.py` (incluso export Excel end-to-end su dati sintetici).
 - **Decisioni**:
   - Un solo profilo per F1A e F1C: le variabili tecniche sono identiche, cambiano solo soglie rpm nelle descrizioni (usate quelle F1C 6.4.2). La separazione F1A/F1C e' data da `engine_model` (derivato da `product_model`).
   - 382/384 restano su tabelle legacy `missiontest.fat_table_<config>` (non spostate in `MISSION_TEST_STATISTICS_CONFIGS`).

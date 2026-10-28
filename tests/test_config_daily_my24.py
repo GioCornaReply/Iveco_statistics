@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from pyspark.sql import SparkSession
 
-from engine_cleaning import apply_statistics_quality_filters
+from engine_cleaning import add_legacy_preparation_features, apply_statistics_quality_filters
 from engine_config import (
     DAILY_MY24_CATALOG,
     get_columns_for_sheet,
@@ -13,6 +13,7 @@ from engine_config import (
 from engine_loader import get_export_file_name, get_metadata_for_config, get_table_path
 from run_local_sample import (
     build_sheet_pivot,
+    export_excel_outputs,
     configure_local_spark_environment,
     get_display_name_for_metric,
     validate_config_columns,
@@ -46,7 +47,19 @@ class ConfigDailyMy24Test(unittest.TestCase):
         self.assertEqual(get_columns_for_sheet(SERIES, GROUP, "1a"), [])
         self.assertEqual(get_columns_for_sheet(SERIES, GROUP, "4h_scr_upstream_temperature"), [])
         self.assertEqual(get_columns_for_sheet("S_WAY_AT_AD_MY_2024", "IVECO_S_WAY", "daily_1a"), [])
-        self.assertIn("daily_4e", get_default_sheet_ids())
+        # Default = solo il report LIGHT; il catalogo completo resta opt-in.
+        self.assertEqual(
+            [sid for sid in get_default_sheet_ids() if sid.startswith("daily_")],
+            [
+                "daily_light_1a_f1a",
+                "daily_light_1a_f1c",
+                "daily_light_1c_f1a",
+                "daily_light_1c_f1c",
+                "daily_light_6a",
+                "daily_light_6b",
+            ],
+        )
+        self.assertNotIn("daily_4e", get_default_sheet_ids())
 
     def test_sheet_names_fit_excel_limit_and_keep_numbering(self):
         for suffix in DAILY_MY24_CATALOG:
@@ -100,6 +113,59 @@ class DailyQualityFilterAgeTest(unittest.TestCase):
         self.assertIsNotNone(df_sheet)
         self.assertFalse(df_sheet.empty)
         self.assertTrue(sheet_name.startswith("1b)"))
+
+
+    def test_light_report_matches_past_example_layout(self):
+        import tempfile
+        import pandas as pd
+
+        old = datetime.now() - timedelta(days=30)
+        rows = []
+        for i in range(6):
+            engine, power = ("F1A", "136 EVI") if i % 2 == 0 else ("F1C", "160 EVI")
+            rows.append((
+                f"V{i}", old, 20000.0 if i % 3 else 5000.0, 100.0, engine, power,
+                50.0 + i, 30.0, 20.0, 10.0, 5.0, 3.0, 2.0,
+                40.0, 30.0, 20.0, 10.0,
+                1.0, 9.0, 90.0, 30.0, 20.0, 50.0,
+            ))
+        columns = [
+            "vin", "udt_timestamp", "mileage", "enginehours", "engine_model", "power",
+            "rev_tor_idle", "rev_tor_cutoff", "rev_tor_extrlow", "rev_tor_low",
+            "rev_tor_opt", "rev_tor_tor", "rev_tor_high",
+            "torque_15_30", "torque_30_60", "torque_60_90", "torque_90_110",
+            "batt_volt_7_11", "batt_volt_11_12", "batt_volt_12_15",
+            "batt_soc_0_60", "batt_soc_60_75", "batt_soc_75_100",
+        ]
+        df = self.spark.createDataFrame(rows, columns)
+        df = apply_statistics_quality_filters(df)
+        df = add_legacy_preparation_features(df)
+        sheet_ids = [sid for sid in get_default_sheet_ids() if sid.startswith("daily_")]
+        validation = validate_config_columns(df, SERIES, GROUP, sheet_ids)
+        outputs = []
+        for sid in sheet_ids:
+            df_sheet, sheet_name = build_sheet_pivot(df, sid, validation[sid])
+            self.assertIsNotNone(df_sheet, sid)
+            outputs.append({"sheet_id": sid, "sheet_name": sheet_name, "dataframe": df_sheet})
+        with tempfile.TemporaryDirectory() as tmp:
+            path = export_excel_outputs(outputs, tmp, "daily.xlsx")
+            book = pd.read_excel(path, sheet_name=None)
+        self.assertEqual(
+            list(book),
+            ["Engine Speed vs Torque F1A", "Engine Speed vs Torque F1C", "Engine Torque F1A",
+             "Engine Torque F1C", "Battery Voltage", "Battery SOC"],
+        )
+        speed_a = book["Engine Speed vs Torque F1A"]
+        self.assertEqual(list(speed_a.columns[:3]), ["Engine Model", "Power", "Rev Tor Idle"])
+        self.assertEqual(list(speed_a.columns[3:6]), ["Standard Deviation", "Advice", "Alert"])
+        self.assertEqual(speed_a.columns[-1], "Count")
+        self.assertEqual(set(speed_a["Engine Model"]), {"F1A"})
+        self.assertEqual(set(book["Engine Torque F1C"]["Engine Model"]), {"F1C"})
+        self.assertIn("Torque 15 30", book["Engine Torque F1A"].columns)
+        voltage = book["Battery Voltage"]
+        self.assertEqual(voltage.columns[0], "Mileage Split")
+        self.assertIn("Critical Voltage region  7-11 [Volt]", voltage.columns)
+        self.assertEqual(list(voltage["Mileage Split"]), ["<10k km", "over 10k km"])
 
 
 if __name__ == "__main__":

@@ -386,7 +386,8 @@ def clean_excel_column_name(col_name):
     if lower_name in dimension_names:
         return dimension_names[lower_name]
 
-    name = re.sub(r"_+", " ", name).strip()
+    # Senza item name usa il nome tecnico privo del suffisso sheet.
+    name = re.sub(r"_+", " ", strip_metric_suffix(name)).strip()
     return name.title()
 
 

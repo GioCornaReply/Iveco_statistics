@@ -1595,21 +1595,60 @@ DAILY_MY24_GROUP_BY = {
     "5d": ["engine_model", "mileage_range"],
 }
 
+# Report "LIGHT" 382/384 (esempio Statistics_LIGHT_382_384_Daily_MY_2024_new_thresholds):
+# (sheet_id, nome sheet, suffisso catalogo, group_by, motore, usa item name come header).
+# 1a/1c sono divisi per motore con header = nome tecnico variabile; la batteria e'
+# raggruppata per mileage_split con gli item name del template.
+DAILY_MY24_LIGHT_SHEETS = [
+    ("daily_light_1a_f1a", "Engine Speed vs Torque F1A", "1a", ["engine_model", "power"], "F1A", False),
+    ("daily_light_1a_f1c", "Engine Speed vs Torque F1C", "1a", ["engine_model", "power"], "F1C", False),
+    ("daily_light_1c_f1a", "Engine Torque F1A", "1c", ["engine_model", "power"], "F1A", False),
+    ("daily_light_1c_f1c", "Engine Torque F1C", "1c", ["engine_model", "power"], "F1C", False),
+    ("daily_light_6a", "Battery Voltage", "6a", ["mileage_split"], None, True),
+    ("daily_light_6b", "Battery SOC", "6b", ["mileage_split"], None, True),
+]
+# Il template 6a/6b usa il doppio spazio dopo "region" (mantenuto nell'header Excel).
+DAILY_MY24_RAW_ITEM_NAMES = {
+    "Critical Voltage region 7-11 [Volt]": "Critical Voltage region  7-11 [Volt]",
+    "Nominal Voltage region 11-12 [Volt]": "Nominal Voltage region  11-12 [Volt]",
+    "Optimal Voltage region 12-15 [Volt]": "Optimal Voltage region  12-15 [Volt]",
+    "Critical SOC region 0-60 [%]": "Critical SOC region  0-60 [%]",
+    "Nominal SOC region 60-75 [%]": "Nominal SOC region  60-75 [%]",
+    "Optimal SOC region 75-100 [%]": "Optimal SOC region  75-100 [%]",
+}
+
 
 def _register_daily_my24_sheets():
+    # Catalogo completo (opt-in: non nei sheet di default).
     for suffix, (sheet_name, items) in DAILY_MY24_CATALOG.items():
         sheet_id = f"{DAILY_SHEET_PREFIX}{suffix}"
-        columns = [variable for variable, _ in items]
         REPORT_SHEET_CONFIG[sheet_id] = {
             "name": sheet_name,
-            "series": {DAILY_MY24_SERIES: columns},
+            "series": {DAILY_MY24_SERIES: [variable for variable, _ in items]},
             "group_by": DAILY_MY24_GROUP_BY.get(suffix, DAILY_MY24_GROUP_BY["default"]),
             "trigger": 1,
         }
-        DEFAULT_REPORT_SHEETS.append(sheet_id)
         for variable, item_name in items:
             # Chiave con suffisso sheet: non sovrascrive le descrizioni Heavy.
             VARIABLE_DISPLAY_NAMES[f"{variable}_{sheet_id}".lower()] = item_name
+
+    # Report LIGHT: sheet di default per la serie Daily.
+    for sheet_id, sheet_name, suffix, group_by, engine, use_item_names in DAILY_MY24_LIGHT_SHEETS:
+        items = DAILY_MY24_CATALOG[suffix][1]
+        conf = {
+            "name": sheet_name,
+            "series": {DAILY_MY24_SERIES: [variable for variable, _ in items]},
+            "group_by": group_by,
+            "trigger": 1,
+        }
+        if engine:
+            conf["allowed_group_values"] = {"engine_model": [engine]}
+        REPORT_SHEET_CONFIG[sheet_id] = conf
+        DEFAULT_REPORT_SHEETS.append(sheet_id)
+        if use_item_names:
+            for variable, item_name in items:
+                key = f"{variable}_{sheet_id}".lower()
+                VARIABLE_DISPLAY_NAMES[key] = DAILY_MY24_RAW_ITEM_NAMES.get(item_name, item_name)
 
 
 _register_daily_my24_sheets()
