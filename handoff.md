@@ -10,6 +10,24 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-10-28 - Claude (Sonnet 5.5) - branch `feat/mission-test-410`
+
+- **Obiettivo**: far girare `Main_pipeline_modular.ipynb` sulle config Daily MY24 diesel `382`/`384` (errore `Nessun Excel generato`).
+- **Diagnosi**: nessuno sheet prodotto perche' `df_clean` risultava vuoto. Indizi: `extract_metadata` restituisce `UNKNOWN` x3 su DataFrame vuoto e anche `complete_dataset` non veniva esportato. Causa piu' probabile: `apply_statistics_quality_filters` scarta i dati con `udt_timestamp` piu' vecchio di 366 giorni (dati Daily MY24 del 2024); possibili anche `mileage <= 1000` / `enginehours <= 1`. Da confermare su Databricks con i conteggi stampati dalla cella export.
+- **Azioni fatte**:
+  - Cella export: se nessuno sheet e' prodotto, stampa `DIAGNOSI` (metadata, righe raw vs dopo filtri, colonne) e solleva errore chiaro.
+  - Widget `max_data_age_days` (default 366, `0` = nessun limite); `apply_statistics_quality_filters` accetta `None`/`<=0` per disattivare il filtro eta'.
+  - Layout Daily MY24: serie `DAILY_MY24`, gruppo `IVECO_DAILY`, metadata 382/384 in `CONFIG_METADATA`, export `Statistics_DAILY_<config>_dataset.xlsx`. 23 sheet `daily_*` (1a..6b, 89 variabili) generati da `DAILY_MY24_CATALOG` in `engine_config.py`, fonte il foglio "TABLES AND PROGRESS BAR" dei template in `382_384_daily_disel/` (non tracciata, non committare).
+  - Test: `tests/test_config_daily_my24.py`.
+- **Decisioni**:
+  - Un solo profilo per F1A e F1C: le variabili tecniche sono identiche, cambiano solo soglie rpm nelle descrizioni (usate quelle F1C 6.4.2). La separazione F1A/F1C e' data da `engine_model` (derivato da `product_model`).
+  - 382/384 restano su tabelle legacy `missiontest.fat_table_<config>` (non spostate in `MISSION_TEST_STATISTICS_CONFIGS`).
+  - Colonne `group_by` non presenti vengono ignorate da `build_sheet_pivot`: gli sheet Daily non saltano se manca `mission`/`mileage_range`.
+- **Prossimi passi**:
+  - Su Databricks lanciare 382 con `max_data_age_days=0` e verificare i conteggi e le colonne reali (`product_model`, `power`, `mission`).
+  - Confermare con il cliente quale config e' F1A e quale F1C (etichette rpm degli item `1a`, `1d`).
+  - Verificare il formato sheet con il cliente: i `Table Name` del template sono abbreviati a 31 caratteri.
+
 ### 2026-10-12 - Claude (Haiku 5.5) - branch `feat/mission-test-410`
 
 - **Obiettivo**: far uscire la config Mission Test `410` (S-WAY NP MY24 C13) con gli sheet e le colonne del template `1_template_colonne/template S-WAY_NP_MY24_C13.xlsx`.

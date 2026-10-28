@@ -71,6 +71,8 @@ def apply_statistics_quality_filters(df: DataFrame, max_data_age_days: int = 366
     Le metriche fuori soglia diventano NULL, cosi' non pesano su media/deviazione
     standard. I record senza mileage, engine-hours o timestamp validi vengono
     esclusi quando la rispettiva sorgente e' disponibile nel dataset.
+    Con ``max_data_age_days`` None o <= 0 il filtro sull'eta' del timestamp e'
+    disattivato (utile per config storiche, es. Daily MY24 del 2024).
     """
     # La stessa protezione si applica anche quando la deduplica VIN e' disattivata.
     df = exclude_corrupt_statistics_rows(df)
@@ -119,10 +121,10 @@ def apply_statistics_quality_filters(df: DataFrame, max_data_age_days: int = 366
 
     if "udt_timestamp" in df.columns:
         timestamp = F.col("udt_timestamp").cast("timestamp")
-        df = df.withColumn("udt_timestamp", timestamp).filter(
-            timestamp.isNotNull()
-            & (F.datediff(F.current_date(), timestamp) < max_data_age_days)
-        )
+        age_filter = timestamp.isNotNull()
+        if max_data_age_days is not None and max_data_age_days > 0:
+            age_filter = age_filter & (F.datediff(F.current_date(), timestamp) < max_data_age_days)
+        df = df.withColumn("udt_timestamp", timestamp).filter(age_filter)
 
     return df
 

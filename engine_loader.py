@@ -23,6 +23,10 @@ CONFIG_METADATA = {
     408: ("MISSION_TEST", "IVECO_X_WAY", "X_WAY_AT_AD_MY_2024"),
     409: ("MISSION_TEST", "IVECO_S_WAY", "S-WAY_AS_NP_MY22_LATAM"),
     410: ("MISSION_TEST", "IVECO_S_X_WAY_NP", "S_WAY_NP_MY24_C13"),
+    # Daily MY24 diesel (F1A/F1C): tabelle legacy missiontest.fat_table_<config>,
+    # con product_* spesso vuoti: i metadata vanno fissati qui.
+    382: ("MISSION_TEST", "IVECO_DAILY", "DAILY_MY24"),
+    384: ("MISSION_TEST", "IVECO_DAILY", "DAILY_MY24"),
 }
 
 VODR_STATISTICS_CONFIGS = {
@@ -99,6 +103,7 @@ def get_export_file_name(product_group, config):
         "IVECO_S_X_WAY_NP": "HEAVY_SWAY_NP",
         "IVECO_X_WAY": "HEAVY_XWAY",
         "IVECO_T_WAY": "HEAVY_TWAY",
+        "IVECO_DAILY": "DAILY",
     }
     prefix = mapping.get(normalized_group, "GENERIC")
     return f"Statistics_{prefix}_{config_str}_dataset.xlsx"

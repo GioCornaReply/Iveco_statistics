@@ -172,9 +172,9 @@ VARIABLE_DISPLAY_NAMES = {
     "region4bis_torque_enginespeed_np_409_1a_2": "High specific fuel consumption (30-50 % / 1800-2500 rpm)",
     "misfire_knocking_cylinders_min": "Misfire/Knocking Detection Cylinders (MIN)",
     "misfuel_engine_normal_pct": "Misfuel With Engine In Normal Mode (Driving Conditions, Working Conditions (Pto))",
-    "catalyst_temperature_low_pct": "Low Catalyst Temperature (<300 °C)",
-    "catalyst_temperature_over_900_pct": "Catalyst Overheating (900-1000 °C)",
-    "catalyst_upstream_over_900_pct": "Temperature Upstream the Catalyst over 900 °C",
+    "catalyst_temperature_low_pct": "Low Catalyst Temperature (<300 deg C)",
+    "catalyst_temperature_over_900_pct": "Catalyst Overheating (900-1000 deg C)",
+    "catalyst_upstream_over_900_pct": "Temperature Upstream the Catalyst over 900 deg C",
     "region1_coolantt": "Not optimal coolant temperature [102-107 C]",
     "region2_coolantt": "Critical coolant temperature [>107 C]",
     "oiltemp1": "Oil temperature OK [<120 C]",
@@ -1369,6 +1369,251 @@ REPORT_SHEET_CONFIG = {
     },
 }
 
+# Daily MY24 diesel (config 382/384, F1A 6.4.1 e F1C 6.4.2).
+# Fonte: catalogo "TABLES AND PROGRESS BAR" dei template in 382_384_daily_disel/
+# (non tracciato). Le variabili tecniche sono identiche fra F1A e F1C; cambiano
+# solo le soglie rpm nelle descrizioni (qui usate quelle F1C 6.4.2). La
+# separazione F1A/F1C avviene tramite engine_model (derivato da product_model).
+DAILY_MY24_SERIES = "DAILY_MY24"
+DAILY_SHEET_PREFIX = "daily_"
+DAILY_MY24_CATALOG = {
+    "1a": (
+        "1a) Engine Speed-Torque",
+        [
+            ("rev_tor_idle", "Low idle -15..15 [%] / 600..900 [rpm]"),
+            ("rev_tor_cutoff", "Cut off range -15..0 [%] / 900.. 4200 [rpm]"),
+            ("rev_tor_extrlow", "Extreme Low load -15..0 [%] / 900..4200 [rpm]"),
+            ("rev_tor_low", "Low load 15..30 [%] / 600.. 4200 [rpm]"),
+            ("rev_tor_opt", "Optimal consumption 30..60 [%] / 600..2400 [rpm]"),
+            ("rev_tor_tor", "High torque request 90..110 [%] / 600..2850 [rpm]"),
+            ("rev_tor_high", "High fuel consumption 30..110 [%] / 2850..4200 [rpm]"),
+        ],
+    ),
+    "1b": (
+        "1b) Vehicle speed distribution",
+        [
+            ("speed_1_20", "Vehicle speed 1..20 [km/h]"),
+            ("speed_20_40", "Vehicle speed 20..40 [km/h]"),
+            ("speed_40_60", "Vehicle speed 40..60 [km/h]"),
+            ("speed_60_80", "Vehicle speed 60..80 [km/h]"),
+            ("speed_80_100", "Vehicle speed 80..100 [km/h]"),
+            ("speed_100_120", "Vehicle speed 100..120 [km/h]"),
+            ("speed_120_140", "Vehicle speed 120..140 [km/h]"),
+            ("speed_140_160", "Vehicle speed 140..160 [km/h]"),
+        ],
+    ),
+    "1c": (
+        "1c) Engine Torque request",
+        [
+            ("torque_15_30", "Low Engine torque request -15..30 [%]"),
+            ("torque_30_60", "Medium-low Engine torque request 30..60 [%]"),
+            ("torque_60_90", "Medium-High Engine torque request 60..90 [%]"),
+            ("torque_90_110", "High Engine torque request 90..110 [%]"),
+        ],
+    ),
+    "1d": (
+        "1d) Engine over speed",
+        [
+            ("eng_rev_1", "Region 1 Engine Speed OK (4200-4300 rpm)"),
+            ("eng_rev_2", "Region 2 Engine Speed under mechanical limit (4300-4400 rpm)"),
+            ("eng_rev_3", "Region 3 Engine Speed (4400-5000 rpm)"),
+        ],
+    ),
+    "2a": (
+        "2a) Oil Pressure",
+        [
+            ("p_oil_opt", "Optimal oil pressure"),
+            ("p_oil_not_opt_low", "Not optimal oil pressure - low speed/ low pressure"),
+            ("p_oil_not_opt_high", "Not optimal oil pressure - high speed/ high pressure"),
+            ("p_oil_critic", "Oil pressure very low - high severity"),
+        ],
+    ),
+    "3a": (
+        "3a) Engine coolant Temperature",
+        [
+            ("eng_t_cool_1", "Region 1 Engine coolant temperature (-30 - 0 deg C)"),
+            ("eng_t_cool_2", "Region 2 Engine coolant temperature (0 - 100 deg C)"),
+            ("eng_t_cool_3", "Region 3 Engine coolant temperature (100 - 110 deg C)"),
+            ("eng_t_cool_4", "Region 4 Engine coolant temperature (110 - 120 deg C)"),
+            ("eng_t_cool_5", "Region 5 Engine coolant temperature (120 - 130 deg C)"),
+        ],
+    ),
+    "3b": (
+        "3b) Fuel Temperature",
+        [
+            ("fuel_t_1", "Region 1 Fuel temperature (40-70 deg C)"),
+            ("fuel_t_2", "Region 2 Fuel temperature (70-90 deg C)"),
+            ("fuel_t_3", "Region 3 Fuel temperature (90-100 deg C)"),
+        ],
+    ),
+    "3c": (
+        "3c) Input air T air-flow meter",
+        [
+            ("in_air_t_meter_1", "Region 1 Input air temperature to air-flow meter (-30 - -10 deg C)"),
+            ("in_air_t_meter_2", "Region 2 Input air temperature to air-flow meter (-10 - 0 deg C)"),
+            ("in_air_t_meter_3", "Region 3 Input air temperature to air-flow meter (0 - 50 deg C)"),
+            ("in_air_t_meter_4", "Region 4 Input air temperature to air-flow meter (50 - 70 deg C)"),
+        ],
+    ),
+    "3d": (
+        "3d) Intake air temperature",
+        [
+            ("int_air_t_1", "Region 1 Intake air temperature (50-70 deg C)"),
+            ("int_air_t_2", "Region 2 Intake air temperature (70-80 deg C)"),
+            ("int_air_t_3", "Region 3 Intake air temperature (80-100 deg C)"),
+            ("int_air_t_4", "Region 4 Intake air temperature (100-130 deg C)"),
+        ],
+    ),
+    "4a": (
+        "4a) Catalyst Eff NOx [g-kWh]",
+        [
+            ("nox_em_a", "REGION A (Optimal catalyst efficiency under PEMS limit: 0 -0.69 g/kWh)"),
+            ("nox_em_b", "REGION B (Middle/good catalyst efficiency under PEMS limit: 0.69- 1.20 g/kWh)"),
+            ("nox_em_c", "REGION C (Low/critical catalyst efficiency measured above OBD limit: 1.2 - 5 g/kWh)"),
+        ],
+    ),
+    "4b": (
+        "4b) Cat Eff vs T upstream DPF",
+        [
+            ("cat_eff_dpf_90_100", "Excellent Catalyst Efficiency 90-100 %"),
+            ("cat_eff_dpf_70_90", "Medium-Good Catalyst Efficiency 70-90 %"),
+            ("cat_eff_dpf_50_70", "Medium-Low Catalyst Efficiency 50-70 %"),
+            ("cat_eff_dpf_0_50", "Low Catalyst Efficiency 0-50 %"),
+        ],
+    ),
+    "4c": (
+        "4c) Cat Eff vs T upstream SCR",
+        [
+            ("cat_eff_scr_90_100", "Excellent Catalyst Efficiency 90-100 %"),
+            ("cat_eff_scr_70_90", "Medium-Good Catalyst Efficiency 70-90 %"),
+            ("cat_eff_scr_50_70", "Medium-Low Catalyst Efficiency 50-70 %"),
+            ("cat_eff_scr_0_50", "Low Catalyst Efficiency 0-50 %"),
+        ],
+    ),
+    "4d": (
+        "4d) SCR upstream temperature",
+        [
+            ("scr_upstr_t_1", "Region 1 SCR Upstream Temperature 400-700 [deg C]"),
+            ("scr_upstr_t_2", "Region 2 SCR Upstream Temperature 700-800 [deg C]"),
+            ("scr_upstr_t_3", "Region 3 SCR Upstream Temperature 800-900 [deg C]"),
+        ],
+    ),
+    "4e": (
+        "4e) SCR downstream temp",
+        [
+            ("scr_dwnstr_t_1", "Region 1 SCR Downstream Temperature 400-700 [deg C]"),
+            ("scr_dwnstr_t_2", "Region 2 SCR Downstream Temperature 700-800 [deg C]"),
+            ("scr_dwnstr_t_3", "Region 3 SCR Downstream Temperature 800-900 [deg C]"),
+        ],
+    ),
+    "5b": (
+        "5b) DPF Flow Resistance",
+        [
+            ("dpf_flow_res_1", "Region 1 Flow resistance 0.50 - 0.60 [hPa/(m^3/h]"),
+            ("dpf_flow_res_2", "Region 2 Flow resistance 0.60 - 0.80 [hPa/(m^3/h]"),
+            ("dpf_flow_res_3", "Region 3 Flow resistance 0.80 - 1 [hPa/(m^3/h]"),
+            ("dpf_flow_res_4", "Region 4 Flow resistance 1 - 1.20 [hPa/(m^3/h]"),
+        ],
+    ),
+    "5c": (
+        "5c) DPF Differential pressure",
+        [
+            ("dpf_diff_p_1", "Region 1 DPF Differential pressure 0-0.20 [bar]"),
+            ("dpf_diff_p_2", "Region 2 DPF Differential pressure 0.20-0.40 [bar]"),
+            ("dpf_diff_p_3", "Region 3 DPF Differential pressure 0.40-0.50 [bar]"),
+            ("dpf_diff_p_4", "Region 4 DPF Differential pressure 0.50-0.60 [bar]"),
+        ],
+    ),
+    "5d": (
+        "5d) DPF upstream temperature",
+        [
+            ("dpf_upstr_t_400_600", "DPF upstream Temperature (400-600 deg C)"),
+            ("dpf_upstr_t_600_800", "DPF upstream Temperature (600-800 deg C)"),
+            ("dpf_upstr_t_800_900", "DPF upstream Temperature (800-900 deg C)"),
+        ],
+    ),
+    "5e": (
+        "5e) DPF downstream temp",
+        [
+            ("dpf_dwnstr_t_400_600", "DPF Downstream Temperature (400-600 deg C)"),
+            ("dpf_dwnstr_t_600_800", "DPF Downstream Temperature (600-800 deg C)"),
+            ("dpf_dwnstr_t_800_900", "DPF Downstream Temperature (800-900 deg C)"),
+        ],
+    ),
+    "5f": (
+        "5f) DOC upstream temperature",
+        [
+            ("doc_upstr_t_0_200", "DOC upstream Temperature (0-200 deg C)"),
+            ("doc_upstr_t_200_500", "DOC upstream Temperature (200-500 deg C)"),
+            ("doc_upstr_t_500_600", "DOC upstream Temperature (500-600 deg C)"),
+        ],
+    ),
+    "5g": (
+        "5g) AdBlue Pressure Pump",
+        [
+            ("adblue_p_1", "Region 1 AdBlue Pump Pressure 5-6.5 [bar]"),
+            ("adblue_p_2", "Region 2 AdBlue Pump Pressure 6.5-7.5 [bar]"),
+            ("adblue_p_3", "Region 3 AdBlue Pump Pressure 7.5-8.5 [bar]"),
+        ],
+    ),
+    "5h": (
+        "5h) AdBlue tank temperature",
+        [
+            ("adblue_t_1", "Region 1 - AdBlue tank temperature -30.. -11 [deg C]"),
+            ("adblue_t_2", "Region 2 - AdBlue tank temperature -11..0 [deg C]"),
+            ("adblue_t_3", "Region 3 - AdBlue tank temperature 0-30 [deg C]"),
+            ("adblue_t_4", "Region 4 - AdBlue tank temperature 30-50 [deg C]"),
+        ],
+    ),
+    "6a": (
+        "6a) Battery voltage",
+        [
+            ("batt_volt_7_11", "Critical Voltage region 7-11 [Volt]"),
+            ("batt_volt_11_12", "Nominal Voltage region 11-12 [Volt]"),
+            ("batt_volt_12_15", "Optimal Voltage region 12-15 [Volt]"),
+        ],
+    ),
+    "6b": (
+        "6b) Battery SOC",
+        [
+            ("batt_soc_0_60", "Critical SOC region 0-60 [%]"),
+            ("batt_soc_60_75", "Nominal SOC region 60-75 [%]"),
+            ("batt_soc_75_100", "Optimal SOC region 75-100 [%]"),
+        ],
+    ),
+}
+
+# Gruppi di raggruppamento per sheet Daily: default engine_model + mission,
+# sheet legati a km/usura con mileage_range.
+DAILY_MY24_GROUP_BY = {
+    "default": ["engine_model", "mission"],
+    "4a": ["engine_model", "mileage_range"],
+    "4b": ["engine_model", "mileage_range"],
+    "4c": ["engine_model", "mileage_range"],
+    "5b": ["engine_model", "mileage_range"],
+    "5c": ["engine_model", "mileage_range"],
+    "5d": ["engine_model", "mileage_range"],
+}
+
+
+def _register_daily_my24_sheets():
+    for suffix, (sheet_name, items) in DAILY_MY24_CATALOG.items():
+        sheet_id = f"{DAILY_SHEET_PREFIX}{suffix}"
+        columns = [variable for variable, _ in items]
+        REPORT_SHEET_CONFIG[sheet_id] = {
+            "name": sheet_name,
+            "series": {DAILY_MY24_SERIES: columns},
+            "group_by": DAILY_MY24_GROUP_BY.get(suffix, DAILY_MY24_GROUP_BY["default"]),
+            "trigger": 1,
+        }
+        DEFAULT_REPORT_SHEETS.append(sheet_id)
+        for variable, item_name in items:
+            # Chiave con suffisso sheet: non sovrascrive le descrizioni Heavy.
+            VARIABLE_DISPLAY_NAMES[f"{variable}_{sheet_id}".lower()] = item_name
+
+
+_register_daily_my24_sheets()
+
 
 def normalize_sheet_id(sheet_id):
     return SHEET_ALIASES.get(sheet_id, sheet_id)
@@ -1447,6 +1692,12 @@ def get_columns_for_sheet(p_series, p_group, sheet_id, available_columns=None):
 
     p_series = normalize_metadata_key(p_series)
     p_group = normalize_metadata_key(p_group)
+
+    # La serie Daily usa solo i propri sheet: nessun fallback sui layout Heavy.
+    if p_series == DAILY_MY24_SERIES:
+        if not sheet_id.startswith(DAILY_SHEET_PREFIX):
+            return []
+        return conf.get("series", {}).get(p_series, [])
 
     skip_series = conf.get("skip_series", set())
     if p_series in skip_series or p_group in conf.get("skip_groups", set()):
