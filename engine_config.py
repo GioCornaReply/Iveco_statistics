@@ -1583,6 +1583,17 @@ DAILY_MY24_CATALOG = {
     ),
 }
 
+# Missione Daily (fasce diverse dall'Heavy), da MT_DAILY_PREP: colonna dedicata
+# `mission_daily`, mostrata con header "Mission".
+DAILY_MISSION_LABELS = [
+    "< 15 km/h HEAVY URBAN",
+    "15 – 25 km/h URBAN",
+    "25 - 45 km/h MIX",
+    "> 45 LONG RANGE",
+]
+DAILY_FUEL_KML_COLUMN = "average_fuel_consumption_kml"
+DAILY_FUEL_KML_ALIAS = "average_fuel_consumption_kml_daily"
+
 # Gruppi di raggruppamento per sheet Daily: default engine_model + mission,
 # sheet legati a km/usura con mileage_range.
 DAILY_MY24_GROUP_BY = {
@@ -1619,6 +1630,20 @@ DAILY_MY24_RAW_ITEM_NAMES = {
 
 
 def _register_daily_my24_sheets():
+    # Consumo medio km/l per motore/modello/potenza/asse/missione (primo sheet Daily).
+    REPORT_SHEET_CONFIG["daily_fuel_kml_2"] = {
+        "name": "Fuel Consumption km_l 2",
+        "series": {DAILY_MY24_SERIES: [DAILY_FUEL_KML_COLUMN]},
+        "use_percentage_columns": False,
+        "group_by": ["engine_model", "product_model", "power", "axle_description", "mission_daily"],
+        "trigger": 0,
+        "zero_as_null": True,
+        # Il nome generico e' la descrizione LNG: qui serve l'header diesel.
+        "rename_columns": {DAILY_FUEL_KML_COLUMN: DAILY_FUEL_KML_ALIAS},
+    }
+    DEFAULT_REPORT_SHEETS.append("daily_fuel_kml_2")
+    VARIABLE_DISPLAY_NAMES[DAILY_FUEL_KML_ALIAS] = "Average fuel consumption [km/l]"
+
     # Catalogo completo (opt-in: non nei sheet di default).
     for suffix, (sheet_name, items) in DAILY_MY24_CATALOG.items():
         sheet_id = f"{DAILY_SHEET_PREFIX}{suffix}"
@@ -1701,6 +1726,7 @@ def get_sheet_settings(sheet_id):
         "allowed_group_values": conf.get("allowed_group_values", {}),
         "duration_columns": conf.get("duration_columns", []),
         "required_group_values": conf.get("required_group_values", {}),
+        "rename_columns": conf.get("rename_columns", {}),
     }
 
 

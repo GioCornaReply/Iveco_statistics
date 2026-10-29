@@ -6,6 +6,8 @@ import pyspark.sql.functions as F
 from pyspark.sql.window import Window
 import re
 
+from engine_config import DAILY_MISSION_LABELS
+
 COVERAGE_DRIVEN_LENGTH_TO_KM = 1000.0
 
 def clean_spark_column_names(df: DataFrame) -> DataFrame:
@@ -65,12 +67,18 @@ def keep_latest_record_per_vin(
     )
 
 
-def apply_statistics_quality_filters(df: DataFrame, max_data_age_days: int = 366) -> DataFrame:
+def apply_statistics_quality_filters(
+    df: DataFrame,
+    max_data_age_days: int = 366,
+    metric_range_overrides=None,
+) -> DataFrame:
     """Applica le regole di qualita' legacy prima delle statistiche.
 
     Le metriche fuori soglia diventano NULL, cosi' non pesano su media/deviazione
     standard. I record senza mileage, engine-hours o timestamp validi vengono
     esclusi quando la rispettiva sorgente e' disponibile nel dataset.
+    ``metric_range_overrides`` ({colonna: (min, max)}) sostituisce i range di
+    default per config che li richiedono (es. Daily: consumo fino a ~13 km/l).
     Con ``max_data_age_days`` None o <= 0 il filtro sull'eta' del timestamp e'
     disattivato (utile per config storiche, es. Daily MY24 del 2024).
     """
@@ -85,6 +93,7 @@ def apply_statistics_quality_filters(df: DataFrame, max_data_age_days: int = 366
         "AdBlue_consumption_l100km": (0.1, 9.0),
         "Average_start": (0.1, 1000.0),
     }
+    metric_ranges.update(metric_range_overrides or {})
     for column, (lower_bound, upper_bound) in metric_ranges.items():
         if column in df.columns:
             value = F.col(column).cast("double")
@@ -276,6 +285,15 @@ def add_legacy_preparation_features(df: DataFrame) -> DataFrame:
             .when(speed >= 50, ">50 km/h HIGHWAY")
         )
         df = _fill_derived_column(df, "mission", mission_expr)
+
+        # Missione Daily (fasce 15/25/45 km/h) in colonna dedicata.
+        daily_mission_expr = (
+            F.when(speed < 15, DAILY_MISSION_LABELS[0])
+            .when((speed >= 15) & (speed <= 25), DAILY_MISSION_LABELS[1])
+            .when((speed > 25) & (speed <= 45), DAILY_MISSION_LABELS[2])
+            .when(speed > 45, DAILY_MISSION_LABELS[3])
+        )
+        df = _fill_derived_column(df, "mission_daily", daily_mission_expr)
 
     mileage_col = None
     if "mileage" in df.columns:

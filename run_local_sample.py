@@ -24,6 +24,7 @@ from engine_cleaning import (
     keep_latest_record_per_vin,
 )
 from engine_config import (
+    DAILY_MISSION_LABELS,
     VARIABLE_DISPLAY_NAMES,
     get_columns_for_sheet,
     get_default_sheet_ids,
@@ -85,6 +86,7 @@ MILEAGE_RANGE_ORDER = [
 MILEAGE_SPLIT_ORDER = ["<10k km", "over 10k km"]
 REPORT_SORT_ORDERS = {
     "mission": MISSION_ORDER,
+    "mission_daily": DAILY_MISSION_LABELS,
     "Average_vehicle_speed_range": AVERAGE_VEHICLE_SPEED_RANGE_ORDER,
     "Average_vehicle_speed_split": AVERAGE_VEHICLE_SPEED_SPLIT_ORDER,
     "mileage_range": MILEAGE_RANGE_ORDER,
@@ -253,6 +255,8 @@ def build_sheet_pivot(df, sheet_id, validation_entry):
         triggers,
         target_columns=settings["target_columns"],
     )
+    if df_pivot is not None and settings["rename_columns"]:
+        df_pivot = df_pivot.rename(columns=settings["rename_columns"])
     if df_pivot is not None:
         df_pivot = ensure_required_group_rows(
             df_pivot,
@@ -378,6 +382,7 @@ def clean_excel_column_name(col_name):
         "power": "Power",
         "axle_description": "Axle Description",
         "mission": "Mission",
+        "mission_daily": "Mission",
         "mileage_range": "Mileage Range",
         "mileage_split": "Mileage Split",
         "average_vehicle_speed_split": "Km",

@@ -41,6 +41,20 @@ VODR_STATISTICS_CONFIGS = {
 }
 
 
+# Config Daily MY24: stessi filtri qualita' ma consumo medio fino a ~25 km/l
+# (il range Heavy 0.1-6 azzererebbe i valori Daily, fino a ~13 km/l).
+DAILY_CONFIGS = {382, 384}
+DAILY_QUALITY_RANGE_OVERRIDES = {"average_fuel_consumption_kml": (0.1, 25.0)}
+
+
+def get_quality_filter_overrides(config):
+    """Range metrici qualita' specifici per le config selezionate (vuoto per Heavy)."""
+    config_values = {int(v) for v in config} if isinstance(config, (set, list, tuple)) else {int(config)}
+    if config_values and config_values <= DAILY_CONFIGS:
+        return dict(DAILY_QUALITY_RANGE_OVERRIDES)
+    return {}
+
+
 def normalize_product_group(product_group):
     """Normalizza il gruppo prodotto per mapping stabili anche con '-' o spazi."""
     if product_group is None:
