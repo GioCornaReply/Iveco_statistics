@@ -99,13 +99,10 @@ def test_copy_excel_to_dbfs_keeps_staged_file_when_cp_fails(tmp_path, monkeypatc
     dbutils.fs.cp = failing_cp
     workspace_staging_dir = tmp_path / "workspace"
 
-    try:
-        copy_excel_to_dbfs(excel_path, dbutils, workspace_staging_dir=workspace_staging_dir)
-    except RuntimeError as exc:
-        assert str(workspace_staging_dir) in str(exc)
-    else:
-        raise AssertionError("Expected RuntimeError")
+    result = copy_excel_to_dbfs(excel_path, dbutils, workspace_staging_dir=workspace_staging_dir)
 
+    assert result["dbfs_path"] is None
+    assert result["workspace_path"] == str(workspace_staging_dir / excel_path.name)
     assert len(attempts) == 3
     assert (workspace_staging_dir / excel_path.name).exists()
 

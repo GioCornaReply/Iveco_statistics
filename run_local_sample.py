@@ -603,11 +603,19 @@ def copy_excel_to_dbfs(
             if attempt < DBFS_COPY_ATTEMPTS:
                 time.sleep(DBFS_COPY_RETRY_SECONDS)
     if last_error is not None:
-        # Non cancello lo staging: l'Excel resta scaricabile dal Workspace.
-        raise RuntimeError(
-            f"Copia su DBFS non riuscita. Excel disponibile in: {staged_excel_path} "
-            f"(originale: {local_excel_path})"
-        ) from last_error
+        # Non cancello lo staging: l'Excel resta scaricabile dal Workspace, quindi
+        # un DBFS non scrivibile (es. DBFS root disabilitato) non deve far perdere il run.
+        print(
+            f"ATTENZIONE: copia su DBFS non riuscita ({type(last_error).__name__}: {last_error}).\n"
+            f"Excel disponibile nel Workspace: {staged_excel_path}\n"
+            f"Originale sul driver: {local_excel_path}"
+        )
+        return {
+            "local_path": str(local_excel_path),
+            "workspace_path": str(staged_excel_path),
+            "dbfs_path": None,
+            "download_url": None,
+        }
     staged_excel_path.unlink(missing_ok=True)
     log_step(f"Excel copiato su DBFS: {dbfs_excel_path}")
 
