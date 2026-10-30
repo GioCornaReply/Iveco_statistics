@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 import pandas as pd
 from pyspark.sql import SparkSession
@@ -548,6 +549,10 @@ def export_excel_outputs(
     return excel_path
 
 
+DBFS_COPY_ATTEMPTS = 3
+DBFS_COPY_RETRY_SECONDS = 3
+
+
 def copy_excel_to_dbfs(
     excel_path,
     dbutils,
@@ -584,12 +589,27 @@ def copy_excel_to_dbfs(
     staged_excel_path = staging_dir / local_excel_path.name
     shutil.copy2(local_excel_path, staged_excel_path)
 
-    try:
-        dbutils.fs.mkdirs(dbfs_output_dir)
-        dbutils.fs.cp(f"file:{staged_excel_path.resolve().as_posix()}", dbfs_excel_path, True)
-        log_step(f"Excel copiato su DBFS: {dbfs_excel_path}")
-    finally:
-        staged_excel_path.unlink(missing_ok=True)
+    staged_uri = f"file:{staged_excel_path.resolve().as_posix()}"
+    dbutils.fs.mkdirs(dbfs_output_dir)
+    last_error = None
+    for attempt in range(1, DBFS_COPY_ATTEMPTS + 1):
+        try:
+            dbutils.fs.cp(staged_uri, dbfs_excel_path, True)
+            last_error = None
+            break
+        except Exception as exc:  # il filesystem workspace puo' vedere il file in ritardo
+            last_error = exc
+            log_step(f"Copia su DBFS fallita (tentativo {attempt}/{DBFS_COPY_ATTEMPTS}): {type(exc).__name__}")
+            if attempt < DBFS_COPY_ATTEMPTS:
+                time.sleep(DBFS_COPY_RETRY_SECONDS)
+    if last_error is not None:
+        # Non cancello lo staging: l'Excel resta scaricabile dal Workspace.
+        raise RuntimeError(
+            f"Copia su DBFS non riuscita. Excel disponibile in: {staged_excel_path} "
+            f"(originale: {local_excel_path})"
+        ) from last_error
+    staged_excel_path.unlink(missing_ok=True)
+    log_step(f"Excel copiato su DBFS: {dbfs_excel_path}")
 
     download_url = None
     if spark is not None:
@@ -622,6 +642,16 @@ def _get_workspace_staging_dir(dbutils, workspace_staging_dir=None):
         return Path(workspace_staging_dir)
 
     candidates = []
+    # Home dell'utente che esegue: su cluster UC shared dbutils vede solo i file
+    # leggibili da lui, non quelli nella cartella Workspace di un collega.
+    try:
+        user_name = str(
+            dbutils.notebook.entry_point.getDbutils().notebook().getContext().userName().get()
+        )
+        candidates.append(Path(f"/Workspace/Users/{user_name}"))
+    except Exception:
+        pass
+
     current_dir = Path.cwd()
     if current_dir.as_posix().startswith("/Workspace"):
         candidates.append(current_dir)
@@ -643,7 +673,7 @@ def _get_workspace_staging_dir(dbutils, workspace_staging_dir=None):
 
     for candidate in candidates:
         if candidate.exists():
-            return candidate / ".iveco_statistics_output"
+            return candidate / "iveco_statistics_output"
 
     raise RuntimeError(
         "Impossibile trovare un percorso workspace per lo staging Excel. "

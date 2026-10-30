@@ -19,6 +19,7 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
   - Legacy 382: 10.577 righe / 5.066 VIN; ~73% con `cov_div_len` < 100 km, quindi `mileage > 1000` lascia ~517 righe; il filtro eta' 366 gg azzera tutto (dati 2024).
   - `axle_description` ha formati diversi ("3.15 REAR AXLE RATIO", "R. AXLE RATIO 3.60", "REAR AXLE RATIO 4.20") e alcuni NULL per VIN con piu' aggiornamenti.
 - **Azioni**: 382/384 spostate in `MISSION_TEST_STATISTICS_CONFIGS` (Unity Catalog); test di routing aggiornato.
+- **Fix copia Excel su DBFS**: errore `FileNotFoundException` su `.iveco_statistics_output` (notebook nella cartella Workspace di un altro utente). `copy_excel_to_dbfs` ora stagia nella home dell'utente che esegue (`/Workspace/Users/<utente>/iveco_statistics_output`, non nascosta), riprova 3 volte e, se fallisce, NON cancella lo staging. Causa non verificata su Databricks (ipotesi: permessi dbutils su cluster UC shared).
 - **Da fare / da verificare**: ricontare righe/VIN sulle tabelle UC e rilanciare; decidere soglia `mileage` per Daily (oggi 1000 km); normalizzare `axle_description`; riempire attributi statici col ultimo valore non nullo per VIN prima della dedup; schema UC puo' differire dalla legacy (colonne `cov_div_len`, `tot_eng_hours`, `engine_type`).
 
 ### 2026-10-28 - Claude (Sonnet 5.5) - branch `feat/mission-test-410`

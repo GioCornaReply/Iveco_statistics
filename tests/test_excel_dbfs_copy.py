@@ -85,6 +85,31 @@ def test_copy_excel_to_dbfs_builds_download_url_from_custom_filestore_dir(tmp_pa
     )
 
 
+def test_copy_excel_to_dbfs_keeps_staged_file_when_cp_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr("run_local_sample.DBFS_COPY_RETRY_SECONDS", 0)
+    excel_path = tmp_path / "Statistics_DAILY_382_384_dataset.xlsx"
+    excel_path.write_bytes(b"excel")
+    dbutils = FakeDbutils()
+    attempts = []
+
+    def failing_cp(source, target, recurse):
+        attempts.append(source)
+        raise FileNotFoundError("does not exist")
+
+    dbutils.fs.cp = failing_cp
+    workspace_staging_dir = tmp_path / "workspace"
+
+    try:
+        copy_excel_to_dbfs(excel_path, dbutils, workspace_staging_dir=workspace_staging_dir)
+    except RuntimeError as exc:
+        assert str(workspace_staging_dir) in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError")
+
+    assert len(attempts) == 3
+    assert (workspace_staging_dir / excel_path.name).exists()
+
+
 def test_copy_excel_to_dbfs_rejects_missing_file(tmp_path):
     dbutils = FakeDbutils()
     missing = tmp_path / "missing.xlsx"
