@@ -13,6 +13,10 @@ MISSION_TEST_STATISTICS_CONFIGS = {
     408,
     409,
     410,  # S-WAY NP MY24 C13 (template 1_template_colonne)
+    # Daily MY24 diesel: la fat table legacy missiontest.* e' incompleta (es. manca
+    # il rapporto 3.59 e molti VIN); la fonte corretta e' Unity Catalog.
+    382,
+    384,
 }
 
 CONFIG_METADATA = {
@@ -23,7 +27,7 @@ CONFIG_METADATA = {
     408: ("MISSION_TEST", "IVECO_X_WAY", "X_WAY_AT_AD_MY_2024"),
     409: ("MISSION_TEST", "IVECO_S_WAY", "S-WAY_AS_NP_MY22_LATAM"),
     410: ("MISSION_TEST", "IVECO_S_X_WAY_NP", "S_WAY_NP_MY24_C13"),
-    # Daily MY24 diesel (F1A/F1C): tabelle legacy missiontest.fat_table_<config>,
+    # Daily MY24 diesel (F1A/F1C): tabelle Unity Catalog mission_test_statistics,
     # con product_* spesso vuoti: i metadata vanno fissati qui.
     382: ("MISSION_TEST", "IVECO_DAILY", "DAILY_MY24"),
     384: ("MISSION_TEST", "IVECO_DAILY", "DAILY_MY24"),

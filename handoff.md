@@ -10,6 +10,17 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-10-30 - Claude (Sonnet 5.5) - branch `feat/mission-test-410`
+
+- **Obiettivo**: email del capo su Daily 382/384: mapping F1A/F1C, rapporto ponte 3.59 assente, ~600 record contro oltre 24.000.
+- **Diagnosi (query su Databricks)**:
+  - Mapping: 382 = F1C (solo `F1CFL411B/C`), 384 = F1A ma con ~15% righe F1C (`engine_type` F1CFL411A/B/C). Il motore va letto da `engine_type`, non dalla config. L'incoerenza "382 = F1A" e' nello smart report.
+  - `missiontest.fat_table_382/384` (legacy, usata finora) NON contiene il 3.59 e non contiene VIN presenti altrove; esistono `u_truck_analyzer_p.mission_test_statistics.fat_table_382/384`, che contengono `3.59 REAR AXLE RATIO` (8410 righe / 3639 VIN nella 384).
+  - Legacy 382: 10.577 righe / 5.066 VIN; ~73% con `cov_div_len` < 100 km, quindi `mileage > 1000` lascia ~517 righe; il filtro eta' 366 gg azzera tutto (dati 2024).
+  - `axle_description` ha formati diversi ("3.15 REAR AXLE RATIO", "R. AXLE RATIO 3.60", "REAR AXLE RATIO 4.20") e alcuni NULL per VIN con piu' aggiornamenti.
+- **Azioni**: 382/384 spostate in `MISSION_TEST_STATISTICS_CONFIGS` (Unity Catalog); test di routing aggiornato.
+- **Da fare / da verificare**: ricontare righe/VIN sulle tabelle UC e rilanciare; decidere soglia `mileage` per Daily (oggi 1000 km); normalizzare `axle_description`; riempire attributi statici col ultimo valore non nullo per VIN prima della dedup; schema UC puo' differire dalla legacy (colonne `cov_div_len`, `tot_eng_hours`, `engine_type`).
+
 ### 2026-10-28 - Claude (Sonnet 5.5) - branch `feat/mission-test-410`
 
 - **Obiettivo**: far girare `Main_pipeline_modular.ipynb` sulle config Daily MY24 diesel `382`/`384` (errore `Nessun Excel generato`).

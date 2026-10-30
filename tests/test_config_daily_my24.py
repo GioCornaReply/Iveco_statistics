@@ -30,10 +30,13 @@ GROUP = "IVECO_DAILY"
 
 
 class ConfigDailyMy24Test(unittest.TestCase):
-    def test_382_384_metadata_and_legacy_routing(self):
+    def test_382_384_metadata_and_unity_catalog_routing(self):
         for config in (382, 384):
             self.assertEqual(get_metadata_for_config({config}), ("MISSION_TEST", GROUP, SERIES))
-            self.assertEqual(get_table_path(config), f"missiontest.fat_table_{config}")
+            self.assertEqual(
+                get_table_path(config),
+                f"u_truck_analyzer_p.mission_test_statistics.fat_table_{config}",
+            )
         self.assertEqual(get_metadata_for_config({382, 384}), ("MISSION_TEST", GROUP, SERIES))
         self.assertEqual(get_export_file_name(GROUP, {382}), "Statistics_DAILY_382_dataset.xlsx")
 
