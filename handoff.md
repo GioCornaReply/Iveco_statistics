@@ -10,6 +10,19 @@ Registro operativo del repository. Ogni agente/contributore dovrebbe leggerlo a 
 
 ## Sessioni
 
+### 2026-11-02 - Claude (Sonnet 5.5, sottoagenti Haiku 5.5) - branch `feat/mission-test-410`
+
+- **Obiettivo**: capire se i 3 punti di Luigi su Daily 382/384 (F1A/F1C, rapporto ponte 3.59, pochi record) sono bug di codice o dati a monte.
+- **Query su Databricks (sola lettura, warehouse TrackAnalyzer, tabelle UC)**:
+  - 3.59 presente: 382 = 37.823 righe / 18.168 VIN; 384 = 8.410 righe / 3.639 VIN. `R. AXLE RATIO 3.60` e' un valore distinto. Nessun NULL in `axle_description`.
+  - VIN `ZCFCE35A705701714`: solo in UC `fat_table_382` (1 riga, 2026-08-26, 3.59, 13.827 km, motore F1AGL411B-H); assente in UC 384 e in `missiontest.fat_table_382/384`. L'Excel inviato era quindi costruito sulle tabelle legacy.
+  - Motori: 382 = 154.025 righe F1C / 31.569 F1A; 384 = 51.156 F1A / 12.109 F1C. Corregge l'assunzione "382 = solo F1C" del 2026-10-30 (valida solo per la legacy).
+  - `cov_div_len` (= `mileage`) e' cumulativo per VIN. Filtro `> 1000` e `tot_eng_hours > 1`: 382 passa da 73.144 a 38.419 VIN, 384 da 24.152 a 18.511. VIN con 3.59 dopo filtri: 4.991 (382), 2.125 (384). 384 senza filtri = 24.152 VIN, vicino ai ~24.000 attesi da Luigi (ipotesi, fonte del suo numero non verificata).
+  - Fat table UC: `udt_timestamp` minimo 2025-09-30.
+- **Decisioni**: nessuna modifica al codice; filtro `mileage > 1000` e `axle_description` lasciati invariati (richiesta utente). Il fix UC (`8db827f`) e' gia' su origin.
+- **Prossimi passi**: pull su Databricks, rilanciare 382/384 da UC e verificare che `daily_fuel_kml_2` mostri `3.59 REAR AXLE RATIO`; il F1A/F1C del template Smart Report richiede il filtro Engine Type lato Luigi; chiarire con chi costruisce le fat table perche' partono dal 2025-09-30.
+- **Nota Windows/Git Bash**: per `databricks api` usare `MSYS_NO_PATHCONV=1`, altrimenti `/api/...` viene convertito in percorso Windows e risponde `Not Found`. Colonne UC: `cov_div_len`, `tot_eng_hours` (non `mileage`/`enginehours`).
+
 ### 2026-10-30 - Claude (Sonnet 5.5) - branch `feat/mission-test-410`
 
 - **Obiettivo**: email del capo su Daily 382/384: mapping F1A/F1C, rapporto ponte 3.59 assente, ~600 record contro oltre 24.000.
